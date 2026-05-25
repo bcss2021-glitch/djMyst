@@ -1,0 +1,6 @@
+{
+  "name": "BeatMaster DJ Controller",
+  "description": "Professional dual-deck digital DJ controller with 3-band EQ, crossfader, and real-time waveform visualization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

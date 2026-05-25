@@ -1,0 +1,100 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-cyan: #00f5ff;
+  --color-brand-purple: #bf00ff;
+  --color-brand-deep: #0a0a0c;
+  --color-brand-panel: #141416;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-deep text-slate-400 selection:bg-brand-cyan selection:text-black overflow-hidden;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+  }
+}
+
+@layer components {
+  .hardware-surface {
+    @apply bg-gradient-to-b from-[#111116] to-[#08080a] border-y border-white/5;
+  }
+
+  .hardware-panel {
+    @apply bg-brand-panel border border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] rounded-lg overflow-hidden;
+  }
+
+  .deck-gradient-a {
+    background: radial-gradient(circle at top left, rgba(0, 245, 255, 0.05), transparent 40%);
+  }
+
+  .deck-gradient-b {
+    background: radial-gradient(circle at top right, rgba(191, 0, 255, 0.05), transparent 40%);
+  }
+
+  .tactile-button {
+    @apply relative overflow-hidden transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .lcd-display {
+    @apply bg-black/60 border border-white/5 rounded-sm font-mono shadow-inner px-2 py-1;
+  }
+
+  .active-glow-cyan {
+    @apply shadow-[0_0_15px_rgba(0,245,255,0.4)] border-brand-cyan/50 bg-brand-cyan/20 text-brand-cyan;
+  }
+
+  .active-glow-purple {
+    @apply shadow-[0_0_15px_rgba(191,0,255,0.4)] border-brand-purple/50 bg-brand-purple/20 text-brand-purple;
+  }
+  
+  .cue-button {
+    @apply rounded-sm border flex items-center justify-center font-black text-[10px] tracking-tight transition-all hover:brightness-110 active:scale-90 shadow-lg;
+  }
+  
+  .play-button {
+    @apply rounded-sm bg-white text-black flex items-center justify-center transition-all hover:scale-105 active:scale-90 shadow-[0_0_20px_rgba(255,255,255,0.1)];
+  }
+
+  .knob-track {
+    @apply relative w-10 h-10 rounded-full bg-black/40 border border-white/10 cursor-pointer shadow-inner;
+  }
+
+  .knob-indicator {
+    @apply absolute top-1.5 left-1/2 -ml-0.5 w-1 h-2 rounded-full;
+  }
+}
+
+/* Specific animations */
+@keyframes pulse-cyan {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; filter: drop-shadow(0 0 5px #00f5ff); }
+}
+
+.animate-pulse-cyan {
+  animation: pulse-cyan 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline {
+  @apply absolute left-0 w-full h-[1px] bg-white/5 pointer-events-none z-10;
+  animation: scanline 8s linear infinite;
+}
