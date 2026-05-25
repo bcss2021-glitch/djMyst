@@ -11,15 +11,44 @@ interface WaveformProps {
   duration?: number;
   cuePoint?: number | null;
   hotCues?: number[];
+  sourceType?: 'AUDIO' | 'EXTERNAL';
 }
 
-export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, onSeek, duration, cuePoint, hotCues }: WaveformProps) {
+export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, onSeek, duration, cuePoint, hotCues, sourceType = 'AUDIO' }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const [localDuration, setLocalDuration] = useState(0);
+  const [cachedPeaks, setCachedPeaks] = useState<number[]>([]);
 
   const finalDuration = duration || localDuration || 180;
+
+  useEffect(() => {
+    if (sourceType === 'EXTERNAL' && url) {
+      // Deterministically generate a nice looking song waveform profile based on the URL
+      const peaks: number[] = [];
+      let seed = 0;
+      for (let c = 0; c < url.length; c++) {
+        seed += url.charCodeAt(c);
+      }
+      
+      const count = 100;
+      for (let i = 0; i < count; i++) {
+        const x = i / count;
+        const baseForm = Math.sin(x * Math.PI) * 0.4; // dome shape
+        const sub1 = Math.sin(x * Math.PI * 6.2 + seed * 0.1) * 0.25;
+        const sub2 = Math.sin(x * Math.PI * 18.7 + seed * 0.05) * 0.15;
+        const envelope = Math.sin(x * Math.PI); // drop off at edges
+        
+        let val = Math.max(0.05, Math.abs(baseForm + sub1 + sub2) * envelope);
+        val = val * 0.8 + (Math.sin(i * 123.45 + seed) * 0.05 + 0.05) * 0.2; // some fuzz
+        peaks.push(val);
+      }
+      setCachedPeaks(peaks);
+    } else {
+      setCachedPeaks([]);
+    }
+  }, [url, sourceType]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -68,6 +97,15 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
 
   useEffect(() => {
     if (url && wavesurferRef.current) {
+      if (sourceType === 'EXTERNAL') {
+        try {
+          wavesurferRef.current.empty();
+        } catch (e) {
+          // ignore empty failures
+        }
+        return;
+      }
+      
       wavesurferRef.current.load(url);
       try {
         wavesurferRef.current.setVolume(0);
@@ -75,7 +113,7 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
         console.warn("WaveSurfer setVolume failed, continuing since muted: true occupies this", e);
       }
     }
-  }, [url]);
+  }, [url, sourceType]);
 
   useEffect(() => {
     if (wavesurferRef.current) {
@@ -106,9 +144,41 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
       for(let x=0; x<canvas.width; x+=40) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
       }
+
+      // 1. Draw procedural background scrolling waveform for EXTERNAL sources
+      if (sourceType === 'EXTERNAL' && cachedPeaks.length > 0) {
+        const barWidth = canvas.width / cachedPeaks.length;
+        const speed = isPlaying ? 0.035 : 0;
+        const scrollFactor = (Date.now() * speed) % (canvas.width * 10);
+        
+        ctx.fillStyle = color === '#3b82f6' ? 'rgba(59, 130, 246, 0.08)' : 'rgba(168, 85, 247, 0.08)';
+        for (let i = 0; i < cachedPeaks.length; i++) {
+          const shift = Math.floor(scrollFactor / barWidth);
+          const idx = (i + shift) % cachedPeaks.length;
+          const h = cachedPeaks[idx] * canvas.height * 0.85;
+          ctx.fillRect(i * barWidth, canvas.height / 2 - h / 2, barWidth - 1, h);
+        }
+      }
       
+      // 2. Draw real-time FFT spectrum overlay
       if (isPlaying) {
-        const data = audioEngine.getFrequencyData(deckId) as Float32Array;
+        let data: Float32Array;
+        if (sourceType === 'EXTERNAL') {
+          // Synthesize high-fidelity external spectrum feedback so it vibrates with life
+          const time = Date.now() * 0.005;
+          const simulated = new Float32Array(64);
+          for (let i = 0; i < 64; i++) {
+            const bassFreq = Math.sin(time * 1.5 + i * 0.05) * 15;
+            const midFreq = Math.cos(time * 3.0 - i * 0.2) * 10;
+            const noise = (Math.random() - 0.5) * 5;
+            const taper = Math.exp(-i / 20);
+            simulated[i] = -85 + Math.abs(bassFreq + midFreq + noise + 25) * taper;
+          }
+          data = simulated;
+        } else {
+          data = audioEngine.getFrequencyData(deckId) as Float32Array;
+        }
+
         const barCount = data.length;
         const barWidth = canvas.width / barCount;
         
@@ -136,7 +206,7 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
     draw();
 
     return () => cancelAnimationFrame(animationId);
-  }, [isPlaying, deckId, color]);
+  }, [isPlaying, deckId, color, sourceType, cachedPeaks]);
 
   return (
     <div className="relative w-full h-[60px] hardware-surface rounded-sm overflow-hidden border border-white/10 group">

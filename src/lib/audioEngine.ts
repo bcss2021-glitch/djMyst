@@ -7,7 +7,10 @@ export class AudioEngine {
   eqB: Tone.EQ3;
   filterA: Tone.Filter;
   filterB: Tone.Filter;
-  crossfader: Tone.CrossFade;
+  faderGainA: Tone.Gain;
+  faderGainB: Tone.Gain;
+  xfadeGainA: Tone.Gain;
+  xfadeGainB: Tone.Gain;
   analyserA: Tone.Analyser;
   analyserB: Tone.Analyser;
   bitcrusherA: Tone.BitCrusher;
@@ -22,10 +25,9 @@ export class AudioEngine {
   pitchShiftB: Tone.PitchShift;
   gainA: Tone.Gain;
   gainB: Tone.Gain;
-  xfadeMuteGainA: Tone.Gain;
-  xfadeMuteGainB: Tone.Gain;
   sampler: Tone.Players;
   limiter: Tone.Limiter;
+  crossfadeValue: number = 0.5;
   crossfadeCurve: number = 0.5; // 0 = linear, 1 = hard cut
   keyLockA: boolean = false;
   keyLockB: boolean = false;
@@ -66,11 +68,14 @@ export class AudioEngine {
     this.pitchShiftA = new Tone.PitchShift(0);
     this.pitchShiftB = new Tone.PitchShift(0);
     
-    this.gainA = new Tone.Gain(1);
-    this.gainB = new Tone.Gain(1);
+    this.gainA = new Tone.Gain(1); // pre-fader trim gain
+    this.gainB = new Tone.Gain(1); // pre-fader trim gain
 
-    this.xfadeMuteGainA = new Tone.Gain(1);
-    this.xfadeMuteGainB = new Tone.Gain(1);
+    this.faderGainA = new Tone.Gain(0.8); // channel volumes
+    this.faderGainB = new Tone.Gain(0.8);
+
+    this.xfadeGainA = new Tone.Gain(1.0); // crossfader mixers
+    this.xfadeGainB = new Tone.Gain(1.0);
     
     this.sampler = new Tone.Players({
       "kick": "https://cdn.pixabay.com/audio/2022/03/10/audio_5594b39b03.mp3",
@@ -89,14 +94,37 @@ export class AudioEngine {
     this.filterA = new Tone.Filter(20000, "lowpass");
     this.filterB = new Tone.Filter(20000, "lowpass");
     
-    this.crossfader = new Tone.CrossFade(0.5);
+    // Explicit, deterministic, and highly-isolated step-by-step routing
+    // DECK A CONNECT SEQUENCE
+    this.deckA.connect(this.gainA);
+    this.gainA.connect(this.pitchShiftA);
+    this.pitchShiftA.connect(this.eqA);
+    this.eqA.connect(this.analyserA);
+    this.analyserA.connect(this.bitcrusherA);
+    this.bitcrusherA.connect(this.reverbA);
+    this.reverbA.connect(this.echoA);
+    this.echoA.connect(this.phaserA);
+    this.phaserA.connect(this.filterA);
+    this.filterA.connect(this.faderGainA);
+    this.faderGainA.connect(this.xfadeGainA);
+    this.xfadeGainA.connect(this.limiter);
+
+    // DECK B CONNECT SEQUENCE
+    this.deckB.connect(this.gainB);
+    this.gainB.connect(this.pitchShiftB);
+    this.pitchShiftB.connect(this.eqB);
+    this.eqB.connect(this.analyserB);
+    this.analyserB.connect(this.bitcrusherB);
+    this.bitcrusherB.connect(this.reverbB);
+    this.reverbB.connect(this.echoB);
+    this.echoB.connect(this.phaserB);
+    this.phaserB.connect(this.filterB);
+    this.filterB.connect(this.faderGainB);
+    this.faderGainB.connect(this.xfadeGainB);
+    this.xfadeGainB.connect(this.limiter);
     
-    // Routing: Player -> Gain -> Pitch -> EQ -> Analyser -> bitcrusher -> reverb -> Echo -> Phaser -> Filter -> XfadeMuteGain -> Crossfader -> Master
-    this.deckA.chain(this.gainA, this.pitchShiftA, this.eqA, this.analyserA, this.bitcrusherA, this.reverbA, this.echoA, this.phaserA, this.filterA, this.xfadeMuteGainA, this.crossfader.a);
-    this.deckB.chain(this.gainB, this.pitchShiftB, this.eqB, this.analyserB, this.bitcrusherB, this.reverbB, this.echoB, this.phaserB, this.filterB, this.xfadeMuteGainB, this.crossfader.b);
-    
-    this.crossfader.chain(this.limiter, Tone.Destination);
-    this.crossfader.connect(this.recorder);
+    this.limiter.connect(Tone.Destination);
+    this.limiter.connect(this.recorder);
   }
 
   clearStatic() {
@@ -439,9 +467,9 @@ export class AudioEngine {
   }
 
   setVolume(deck: 'A' | 'B', value: number) {
-    const player = this.getDeck(deck);
-    // Channel volume (Fader)
-    player.volume.value = Tone.gainToDb(value);
+    const fader = deck === 'A' ? this.faderGainA : this.faderGainB;
+    // Channel volume (Fader) - Clean, linear gain ramping
+    fader.gain.rampTo(value, 0.05);
   }
 
   setKeyLock(deck: 'A' | 'B', enabled: boolean) {
@@ -477,10 +505,11 @@ export class AudioEngine {
 
   setCrossfaderCurve(value: number) {
     this.crossfadeCurve = value;
-    this.updateCrossfader(this.crossfader.fade.value);
+    this.updateCrossfader(this.crossfadeValue);
   }
 
   setCrossfade(value: number) {
+    this.crossfadeValue = value;
     this.updateCrossfader(value);
   }
 
@@ -493,8 +522,6 @@ export class AudioEngine {
         else if (value > 0.55) fadeVal = 1;
         else fadeVal = 0.5;
     }
-    
-    this.crossfader.fade.value = fadeVal;
 
     // Apply professional Equal Gain DJ crossfader curve to prevent split bleed
     let gainA = 1;
@@ -524,9 +551,9 @@ export class AudioEngine {
       }
     }
 
-    // Assign gain values safely
-    this.xfadeMuteGainA.gain.value = gainA;
-    this.xfadeMuteGainB.gain.value = gainB;
+    // Assign gain values safely through explicit rampTo
+    this.xfadeGainA.gain.rampTo(gainA, 0.05);
+    this.xfadeGainB.gain.rampTo(gainB, 0.05);
   }
 
   setPlaybackRate(deck: 'A' | 'B', rate: number) {

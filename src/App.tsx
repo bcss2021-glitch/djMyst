@@ -854,6 +854,7 @@ export default function App() {
                 duration={trackInfo[deck].duration}
                 cuePoint={cuePoints[deck]}
                 hotCues={hotCues[trackInfo[deck].id || ''] || []}
+                sourceType={deckSources[deck]}
               />
             </div>
             
