@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Tone from 'tone';
-import { Music, Upload, Info, Settings, Search, Disc3, Headphones, ChevronUp, ChevronDown, Maximize2, LayoutGrid, List, Activity, Heart, ListPlus, Trash2, Star, Save, Clock } from 'lucide-react';
+import { Music, Upload, Info, Settings, Search, Disc3, Headphones, ChevronUp, ChevronDown, Maximize2, LayoutGrid, List, Activity, Heart, ListPlus, Trash2, Star, Save, Clock, Download, Plus, FileText } from 'lucide-react';
 import { audioEngine } from './lib/audioEngine';
 import Deck from './components/Deck';
 import Mixer from './components/Mixer';
@@ -28,6 +28,19 @@ interface SavedTrack {
   isAudius?: boolean;
   config?: TrackConfig;
   addedAt: number;
+}
+
+interface SavedExternalLink {
+  id: string;
+  title: string;
+  url: string;
+  isFavorite?: boolean;
+  addedAt: number;
+}
+
+interface SavedExternalList {
+  name: string;
+  links: SavedExternalLink[];
 }
 
 const DEFAULT_TRACKS = [
@@ -78,6 +91,30 @@ export default function App() {
   const [activeLibraryTab, setActiveLibraryTab] = useState<'CRATES' | 'PLAYLIST' | 'FAVORITES' | 'HISTORY' | 'YOUTUBE' | 'SPOTIFY'>('CRATES');
   const [deckSources, setDeckSources] = useState<{ A: 'AUDIO' | 'EXTERNAL', B: 'AUDIO' | 'EXTERNAL' }>({ A: 'AUDIO', B: 'AUDIO' });
   const [externalUrls, setExternalUrls] = useState<{ A: string | null, B: string | null }>({ A: null, B: null });
+
+  const [externalLists, setExternalLists] = useState<SavedExternalList[]>(() => {
+    try {
+      const saved = localStorage.getItem('dj_external_lists');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse external lists", e);
+    }
+    return [
+      {
+        name: "Manual Submissions",
+        links: []
+      }
+    ];
+  });
+
+  const [externalUrlInput, setExternalUrlInput] = useState('');
+  const [externalTitleInput, setExternalTitleInput] = useState('');
+  const [expandedLists, setExpandedLists] = useState<Record<string, boolean>>({ "Manual Submissions": true });
 
   const [trackInfo, setTrackInfo] = useState({
     A: { title: 'READY', url: null as string | null, id: null as string | null, artist: null as string | null, duration: 0 },
@@ -321,6 +358,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('dj_hotcues', JSON.stringify(hotCues));
   }, [hotCues]);
+
+  useEffect(() => {
+    localStorage.setItem('dj_external_lists', JSON.stringify(externalLists));
+  }, [externalLists]);
 
   const togglePlay = (deck: 'A' | 'B') => {
     if (!trackInfo[deck].url || loadingState[deck]) return;
@@ -726,9 +767,303 @@ export default function App() {
     };
   }, [isResizing]);
 
-  const handleLoadExternalLink = (deck: 'A' | 'B', url: string) => {
+  const getCleanTitleFromUrl = (url: string, provider: string): string => {
+    try {
+      const u = new URL(url);
+      if (provider === 'YouTube') {
+        const v = u.searchParams.get('v');
+        if (v) return `YouTube Track [${v}]`;
+        if (u.pathname && u.pathname !== '/') return `YouTube Track [${u.pathname.split('/').pop()}]`;
+      } else if (provider === 'Spotify') {
+        const match = u.pathname.match(/\/(track|playlist|album)\/([a-zA-Z0-9]+)/);
+        if (match) return `Spotify ${match[1].toUpperCase()} [${match[2].substring(0, 6)}]`;
+      }
+    } catch (_) {}
+    return `${provider} Stream`;
+  };
+
+  const handleLoadExternalLink = (deck: 'A' | 'B', url: string, customTitle?: string) => {
+    if (!url) return;
     const type = url.includes('youtube') || url.includes('youtu.be') ? 'YouTube' : 'Spotify';
-    loadTrack(deck, `${type} Stream`, url);
+    const finalTitle = customTitle || externalTitleInput.trim() || getCleanTitleFromUrl(url, type);
+    
+    // Load track onto the deck
+    loadTrack(deck, finalTitle, url);
+    
+    // Auto-save to 'Manual Submissions' if not already present in ANY of the lists
+    const linkExists = externalLists.some(list => list.links.some(lnk => lnk.url.trim() === url.trim()));
+    if (!linkExists) {
+      const newLnk: SavedExternalLink = {
+        id: 'ext-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        title: finalTitle,
+        url: url.trim(),
+        isFavorite: false,
+        addedAt: Date.now()
+      };
+      
+      setExternalLists(prev => {
+        const next = [...prev];
+        const manualIdx = next.findIndex(l => l.name === 'Manual Submissions');
+        if (manualIdx !== -1) {
+          next[manualIdx] = {
+            ...next[manualIdx],
+            links: [newLnk, ...next[manualIdx].links]
+          };
+        } else {
+          next.unshift({
+            name: 'Manual Submissions',
+            links: [newLnk]
+          });
+        }
+        return next;
+      });
+    }
+    
+    // Reset/clear custom input states
+    setExternalUrlInput('');
+    setExternalTitleInput('');
+  };
+
+  const handleAddNewExternalLinkOnly = () => {
+    const url = externalUrlInput.trim();
+    if (!url) return;
+    const type = url.includes('youtube') || url.includes('youtu.be') ? 'YouTube' : 'Spotify';
+    const finalTitle = externalTitleInput.trim() || getCleanTitleFromUrl(url, type);
+    
+    const newLnk: SavedExternalLink = {
+      id: 'ext-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      title: finalTitle,
+      url: url,
+      isFavorite: false,
+      addedAt: Date.now()
+    };
+
+    setExternalLists(prev => {
+      const next = [...prev];
+      const manualIdx = next.findIndex(l => l.name === 'Manual Submissions');
+      if (manualIdx !== -1) {
+        next[manualIdx] = {
+          ...next[manualIdx],
+          links: [newLnk, ...next[manualIdx].links]
+        };
+      } else {
+        next.unshift({
+          name: 'Manual Submissions',
+          links: [newLnk]
+        });
+      }
+      return next;
+    });
+
+    setExternalUrlInput('');
+    setExternalTitleInput('');
+  };
+
+  const toggleExternalLinkFavorite = (listName: string, linkId: string) => {
+    setExternalLists(prev => prev.map(lst => {
+      if (lst.name !== listName) return lst;
+      return {
+        ...lst,
+        links: lst.links.map(lnk => {
+          if (lnk.id !== linkId) return lnk;
+          return { ...lnk, isFavorite: !lnk.isFavorite };
+        })
+      };
+    }));
+  };
+
+  const deleteExternalLink = (listName: string, linkId: string) => {
+    setExternalLists(prev => prev.map(lst => {
+      if (lst.name !== listName) return lst;
+      return {
+        ...lst,
+        links: lst.links.filter(lnk => lnk.id !== linkId)
+      };
+    }));
+  };
+
+  const deleteExternalList = (listName: string) => {
+    if (listName === 'Manual Submissions') {
+      setExternalLists(prev => prev.map(lst => {
+        if (lst.name !== 'Manual Submissions') return lst;
+        return { ...lst, links: [] };
+      }));
+    } else {
+      setExternalLists(prev => prev.filter(lst => lst.name !== listName));
+    }
+  };
+
+  const clearAllExternalLists = () => {
+    setExternalLists([
+      {
+        name: "Manual Submissions",
+        links: []
+      }
+    ]);
+  };
+
+  const exportExternalLists = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(externalLists, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", "dj_external_links_tracker.json");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const importExternalListFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      const fileName = file.name;
+      const cleanFileName = fileName.replace(/\.[^/.]+$/, "");
+      
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result as string;
+          if (fileName.endsWith('.json')) {
+            const parsed = JSON.parse(content);
+            
+            if (Array.isArray(parsed) && parsed.every(item => typeof item === 'object' && 'name' in item && 'links' in item)) {
+              setExternalLists(prev => {
+                const next = [...prev];
+                parsed.forEach(importedList => {
+                  const existingIdx = next.findIndex(l => l.name === importedList.name);
+                  if (existingIdx !== -1) {
+                    const uniqueLinks = [...importedList.links];
+                    next[existingIdx] = {
+                      ...next[existingIdx],
+                      links: [...uniqueLinks, ...next[existingIdx].links.filter(el => !uniqueLinks.some(ul => ul.url === el.url))]
+                    };
+                  } else {
+                    next.push(importedList);
+                  }
+                });
+                return next;
+              });
+            }
+            else if (typeof parsed === 'object' && parsed !== null && 'links' in parsed) {
+              const listName = parsed.name || cleanFileName;
+              const linksList = Array.isArray(parsed.links) ? parsed.links : [];
+              setExternalLists(prev => {
+                const next = [...prev];
+                const existingIdx = next.findIndex(l => l.name === listName);
+                const processedLinks: SavedExternalLink[] = linksList.map((lnk: any, i: number) => ({
+                  id: lnk.id || `lnk-${Date.now()}-${i}-${Math.random().toString(36).substring(2,5)}`,
+                  title: lnk.title || getCleanTitleFromUrl(lnk.url || '', 'External'),
+                  url: lnk.url || '',
+                  isFavorite: !!lnk.isFavorite,
+                  addedAt: lnk.addedAt || Date.now()
+                })).filter((l: any) => l.url);
+
+                if (existingIdx !== -1) {
+                  next[existingIdx] = {
+                    ...next[existingIdx],
+                    links: [...processedLinks, ...next[existingIdx].links.filter(el => !processedLinks.some(pl => pl.url === el.url))]
+                  };
+                } else {
+                  next.push({ name: listName, links: processedLinks });
+                }
+                return next;
+              });
+            }
+            else if (Array.isArray(parsed) && parsed.every(item => typeof item === 'object' && 'url' in item)) {
+              setExternalLists(prev => {
+                const next = [...prev];
+                const existingIdx = next.findIndex(l => l.name === cleanFileName);
+                const processedLinks: SavedExternalLink[] = parsed.map((lnk: any, i: number) => ({
+                  id: lnk.id || `lnk-${Date.now()}-${i}`,
+                  title: lnk.title || getCleanTitleFromUrl(lnk.url, 'External'),
+                  url: lnk.url,
+                  isFavorite: !!lnk.isFavorite,
+                  addedAt: Date.now()
+                }));
+
+                if (existingIdx !== -1) {
+                  next[existingIdx] = {
+                    ...next[existingIdx],
+                    links: [...processedLinks, ...next[existingIdx].links.filter(el => !processedLinks.some(pl => pl.url === el.url))]
+                  };
+                } else {
+                  next.push({ name: cleanFileName, links: processedLinks });
+                }
+                return next;
+              });
+            }
+            else if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+              setExternalLists(prev => {
+                const next = [...prev];
+                const existingIdx = next.findIndex(l => l.name === cleanFileName);
+                const processedLinks: SavedExternalLink[] = parsed.map((url: string, i: number) => {
+                  const type = url.includes('youtube') || url.includes('youtu.be') ? 'YouTube' : 'Spotify';
+                  return {
+                    id: `lnk-${Date.now()}-${i}`,
+                    title: getCleanTitleFromUrl(url, type),
+                    url,
+                    isFavorite: false,
+                    addedAt: Date.now()
+                  };
+                });
+
+                if (existingIdx !== -1) {
+                  next[existingIdx] = {
+                    ...next[existingIdx],
+                    links: [...processedLinks, ...next[existingIdx].links.filter(el => !processedLinks.some(pl => pl.url === el.url))]
+                  };
+                } else {
+                  next.push({ name: cleanFileName, links: processedLinks });
+                }
+                return next;
+              });
+            }
+          } else {
+            const lines = content.split('\n');
+            const processedLinks: SavedExternalLink[] = [];
+            let currentLineIndex = 0;
+            
+            lines.forEach(line => {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+                const type = trimmed.includes('youtube') || trimmed.includes('youtu.be') ? 'YouTube' : 'Spotify';
+                processedLinks.push({
+                  id: `lnk-${Date.now()}-${currentLineIndex++}`,
+                  title: getCleanTitleFromUrl(trimmed, type),
+                  url: trimmed,
+                  isFavorite: false,
+                  addedAt: Date.now()
+                });
+              }
+            });
+
+            if (processedLinks.length > 0) {
+              setExternalLists(prev => {
+                const next = [...prev];
+                const existingIdx = next.findIndex(l => l.name === cleanFileName);
+                if (existingIdx !== -1) {
+                  next[existingIdx] = {
+                    ...next[existingIdx],
+                    links: [...processedLinks, ...next[existingIdx].links.filter(el => !processedLinks.some(pl => pl.url === el.url))]
+                  };
+                } else {
+                  next.push({ name: cleanFileName, links: processedLinks });
+                }
+                return next;
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to parse file", err);
+          alert("Error importing list content. Ensure proper formatting.");
+        }
+      };
+      
+      reader.readAsText(file);
+    });
+    
+    e.target.value = '';
   };
 
   const triggerSample = (name: string) => {
@@ -1364,48 +1699,216 @@ export default function App() {
                     </p>
                   </div>
                   
-                  <div className="w-full flex gap-2">
+                  <div className="w-full flex gap-2 flex-col sm:flex-row">
                     <input 
                       type="text" 
+                      value={externalUrlInput}
+                      onChange={(e) => setExternalUrlInput(e.target.value)}
                       placeholder={`Enter ${activeLibraryTab} URL (e.g. https://...)...`}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-[11px] focus:outline-none focus:border-blue-500 transition-all font-mono"
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] focus:outline-none focus:border-cyan-500 transition-all font-mono text-white/90"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          handleLoadExternalLink('A', (e.target as HTMLInputElement).value);
-                          (e.target as HTMLInputElement).value = '';
+                          handleLoadExternalLink('A', externalUrlInput);
                         }
                       }}
                     />
+                    <input 
+                      type="text" 
+                      value={externalTitleInput}
+                      onChange={(e) => setExternalTitleInput(e.target.value)}
+                      placeholder="Custom Title / Name (optional)..."
+                      className="w-full sm:w-1/3 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] focus:outline-none focus:border-cyan-500 transition-all text-white/90"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 w-full max-w-xs">
+                  <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
                      <button 
-                       onClick={() => {
-                         const input = document.querySelector('input[placeholder*="Enter"]') as HTMLInputElement;
-                         if (input.value) handleLoadExternalLink('A', input.value);
-                       }}
-                       className="px-4 py-2 rounded bg-blue-600/20 border border-blue-500/40 text-blue-400 text-[10px] font-bold uppercase hover:bg-blue-600/40 transition-all"
+                       onClick={() => handleLoadExternalLink('A', externalUrlInput)}
+                       disabled={!externalUrlInput}
+                       className="px-4 py-2 rounded bg-blue-600/20 border border-blue-500/40 text-blue-400 text-[10px] font-bold uppercase hover:bg-blue-600/40 disabled:opacity-40 disabled:hover:bg-blue-600/20 transition-all cursor-pointer font-sans"
                      >
                        Load Deck A
                      </button>
                      <button 
-                       onClick={() => {
-                         const input = document.querySelector('input[placeholder*="Enter"]') as HTMLInputElement;
-                         if (input.value) handleLoadExternalLink('B', input.value);
-                       }}
-                       className="px-4 py-2 rounded bg-purple-600/20 border border-purple-500/40 text-purple-400 text-[10px] font-bold uppercase hover:bg-purple-600/40 transition-all"
+                       onClick={() => handleLoadExternalLink('B', externalUrlInput)}
+                       disabled={!externalUrlInput}
+                       className="px-4 py-2 rounded bg-purple-600/20 border border-purple-500/40 text-purple-400 text-[10px] font-bold uppercase hover:bg-purple-600/40 disabled:opacity-40 disabled:hover:bg-purple-600/20 transition-all cursor-pointer font-sans"
                      >
                        Load Deck B
                      </button>
+                     <button 
+                       onClick={handleAddNewExternalLinkOnly}
+                       disabled={!externalUrlInput}
+                       className="col-span-2 px-4 py-1.5 rounded bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase hover:bg-emerald-600/20 disabled:opacity-40 disabled:hover:bg-emerald-600/10 transition-all flex items-center justify-center gap-1 cursor-pointer font-sans"
+                     >
+                       <Plus size={11} /> Save Track to Tracker Only
+                     </button>
                   </div>
 
-                  <div className="mt-4 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 max-w-md">
+                  <div className="mt-2 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 w-full max-w-xl">
                      <div className="flex items-center gap-2 text-orange-400 text-[9px] font-bold uppercase mb-1">
                         <Info size={12} /> External Source Disclaimer
                      </div>
                      <p className="text-[9px] text-orange-400/60 leading-relaxed italic text-left">
                         Standard browser-based DJ effects like **Scratching, Pitch-Shifting, and EQ Isolators** are disabled for {activeLibraryTab} streams. These tracks will play at original speed and fidelity. {activeLibraryTab === 'YOUTUBE' ? 'Premium accounts bypass ads natively.' : 'Spotify requires active session in browser.'}
                      </p>
+                  </div>
+
+                  {/* External Lists Tracker */}
+                  <div className="w-full mt-6 text-left border-t border-white/10 pt-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-2">
+                        <ListPlus size={16} className="text-zinc-400" />
+                        <h4 className="text-[11px] font-bold tracking-wider uppercase text-zinc-300">Saved Links Tracker ({externalLists.reduce((acc, curr) => acc + curr.links.length, 0)})</h4>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <input 
+                          type="file" 
+                          id="import-external-file" 
+                          accept=".json,.txt" 
+                          onChange={importExternalListFile} 
+                          className="hidden" 
+                          multiple
+                        />
+                        <button
+                          onClick={() => document.getElementById('import-external-file')?.click()}
+                          className="flex items-center gap-1 px-2.5 py-1 text-[9px] rounded bg-zinc-800 hover:bg-zinc-700 font-bold uppercase text-zinc-300 transition-all border border-zinc-700 cursor-pointer font-sans"
+                          title="Import local file list (.json, .txt)"
+                        >
+                          <Upload size={10} /> Import
+                        </button>
+                        <button
+                          onClick={exportExternalLists}
+                          className="flex items-center gap-1 px-2.5 py-1 text-[9px] rounded bg-zinc-800 hover:bg-zinc-700 font-bold uppercase text-zinc-300 transition-all border border-zinc-700 cursor-pointer font-sans"
+                          title="Download list backup (.json)"
+                        >
+                          <Download size={10} /> Export
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Are you sure you want to clear all track lists?")) {
+                              clearAllExternalLists();
+                            }
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1 text-[9px] rounded bg-red-950/40 hover:bg-red-900/40 font-bold uppercase text-red-500 transition-all border border-red-500/20 cursor-pointer font-sans"
+                          title="Clear all track lists"
+                        >
+                          <Trash2 size={10} /> Clear All
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 select-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 w-full">
+                      {externalLists.map((list) => {
+                        const isExpanded = expandedLists[list.name] !== false;
+                        return (
+                          <div key={list.name} className="bg-white/[0.01] border border-white/5 rounded-lg overflow-hidden w-full">
+                            {/* Group Header */}
+                            <div className="flex items-center justify-between px-3 py-2 bg-white/[0.03] border-b border-white/5">
+                              <button 
+                                onClick={() => setExpandedLists(prev => ({ ...prev, [list.name]: !isExpanded }))}
+                                className="flex items-center gap-2 hover:text-white text-zinc-300 transition-all cursor-pointer"
+                              >
+                                {isExpanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                                <span className="font-mono text-[10px] font-bold">{list.name}</span>
+                                <span className="text-[9px] text-zinc-500 bg-black/30 px-1.5 py-0.5 rounded font-bold font-mono">
+                                  {list.links.length}
+                                </span>
+                              </button>
+
+                              <button 
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to clear "${list.name}"?`)) {
+                                    deleteExternalList(list.name);
+                                  }
+                                }}
+                                className="p-1 text-zinc-500 hover:text-red-400 rounded hover:bg-white/5 transition-all cursor-pointer"
+                                title={`Delete ${list.name}`}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+
+                            {/* Group Links Table */}
+                            {isExpanded && (
+                              <div className="p-1 divide-y divide-white/5 font-sans">
+                                {list.links.length > 0 ? (
+                                  list.links.map((link) => {
+                                    const isFav = !!link.isFavorite;
+                                    const isYT = link.url.includes('youtube') || link.url.includes('youtu.be');
+                                    return (
+                                      <div key={link.id} className="flex gap-2 items-center justify-between p-2 hover:bg-white/[0.02] transition-all group rounded border border-transparent">
+                                        <div className="flex-1 min-w-0 text-left">
+                                          <div className="flex items-center gap-1.5 mb-0.5">
+                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isYT ? 'bg-red-500' : 'bg-green-500'}`} />
+                                            <span className="text-[10px] font-semibold text-zinc-200 truncate block">
+                                              {link.title}
+                                            </span>
+                                          </div>
+                                          <span className="text-[8px] text-zinc-500 font-mono block truncate max-w-[280px]">
+                                            {link.url}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          {/* Load direct A */}
+                                          <button
+                                            onClick={() => handleLoadExternalLink('A', link.url, link.title)}
+                                            className="px-1.5 py-0.5 text-[8px] font-bold rounded bg-blue-600/10 hover:bg-blue-600/30 text-blue-400 border border-blue-500/20 active:scale-95 transition-all uppercase cursor-pointer"
+                                            title="Load to Deck A"
+                                          >
+                                            Deck A
+                                          </button>
+                                          {/* Load direct B */}
+                                          <button
+                                            onClick={() => handleLoadExternalLink('B', link.url, link.title)}
+                                            className="px-1.5 py-0.5 text-[8px] font-bold rounded bg-purple-600/10 hover:bg-purple-600/30 text-purple-400 border border-purple-500/20 active:scale-95 transition-all uppercase cursor-pointer"
+                                            title="Load to Deck B"
+                                          >
+                                            Deck B
+                                          </button>
+                                          {/* Place into link field */}
+                                          <button
+                                            onClick={() => {
+                                              setExternalUrlInput(link.url);
+                                              setExternalTitleInput(link.title);
+                                            }}
+                                            className="p-1 px-1.5 text-[8px] font-semibold text-zinc-400 bg-zinc-850 hover:bg-zinc-700 hover:text-white rounded transition-all font-mono cursor-pointer"
+                                            title="Fill edit fields above"
+                                          >
+                                            Paste
+                                          </button>
+                                          {/* Favorite */}
+                                          <button 
+                                            onClick={() => toggleExternalLinkFavorite(list.name, link.id)}
+                                            className="p-1 hover:bg-white/5 rounded transition-all cursor-pointer hover:text-red-400 text-zinc-650"
+                                          >
+                                            <Heart size={11} className={isFav ? "text-red-500 fill-red-500" : "currentColor"} />
+                                          </button>
+                                          {/* Delete link */}
+                                          <button 
+                                            onClick={() => deleteExternalLink(list.name, link.id)}
+                                            className="p-1 hover:bg-white/5 rounded hover:text-red-400 text-zinc-500 transition-all cursor-pointer"
+                                            title="Delete track"
+                                          >
+                                            <Trash2 size={11} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="py-4 text-center text-[9px] text-zinc-600 italic">
+                                    No tracks in this list. Submit links above or import files.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
               </div>
             )}
