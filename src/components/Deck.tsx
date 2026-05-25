@@ -285,6 +285,227 @@ interface DeckProps {
   isSynced?: boolean;
 }
 
+interface InteractiveSliderProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  color: string;
+}
+
+function InteractiveSlider({ label, value, min, max, onChange, color }: InteractiveSliderProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const handleStart = (e: React.MouseEvent | React.TouchEvent, clientY: number) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const rect = e.currentTarget.parentElement?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const updateValue = (currY: number) => {
+      const relativeY = Math.max(0, Math.min(rect.height, currY - rect.top));
+      const fraction = 1 - (relativeY / rect.height);
+      const val = min + fraction * (max - min);
+      onChange(Math.max(min, Math.min(max, val)));
+    };
+
+    updateValue(clientY);
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      updateValue(moveEvent.clientY);
+    };
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.cancelable) moveEvent.preventDefault();
+      updateValue(moveEvent.touches[0].clientY);
+    };
+
+    const handleStop = () => {
+      setIsDragging(false);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleStop);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleStop);
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleStop);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleStop);
+  };
+
+  const percentage = ((value - min) / (max - min)) * 100;
+
+  return (
+    <div className="flex flex-col items-center gap-1 select-none h-full justify-between">
+      <div className="flex flex-col items-center">
+        <span className="text-[7px] font-black tracking-wider text-white/30 font-mono uppercase leading-none">{label}</span>
+        <span className="text-[8px] font-mono font-bold text-white/60 mt-0.5 leading-none">{(value / max * 100).toFixed(0)}%</span>
+      </div>
+
+      <div className="relative h-20 w-10 bg-black/35 border border-white/5 rounded-md flex items-center justify-center p-1">
+        <div 
+          className="relative h-full w-4 flex items-center justify-center cursor-pointer"
+          onMouseDown={(e) => handleStart(e, e.clientY)}
+          onTouchStart={(e) => handleStart(e, e.touches[0].clientY)}
+          onDoubleClick={() => onChange(min)}
+          title="Drag vertical fader. Double-tap/click to clear."
+        >
+          <div className="absolute inset-y-0 w-1 bg-black/60 border border-white/5 rounded-full" />
+          
+          <div 
+            className="absolute bottom-0 w-1 rounded-full pointer-events-none" 
+            style={{ height: `${percentage}%`, backgroundColor: color, opacity: 0.3 }}
+          />
+
+          <div 
+            className="absolute left-1/2 -translate-x-1/2 w-7 h-4 bg-[#18181b] border-y border-white/10 rounded-sm shadow-xl flex items-center justify-center cursor-ns-resize"
+            style={{ 
+              bottom: `calc(${percentage}% - 8px)`,
+              boxShadow: isDragging ? `0 0 10px ${color}` : 'none'
+            }}
+          >
+            <div className="w-5 h-0.5 rounded-full" style={{ backgroundColor: color }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-1">
+        <button 
+          onClick={() => onChange(Math.max(min, value - (max - min) * 0.1))}
+          className="w-4 h-4 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40 active:bg-white/15"
+        >
+          -
+        </button>
+        <button 
+          onClick={() => onChange(Math.min(max, value + (max - min) * 0.1))}
+          className="w-4 h-4 rounded bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-black text-white/40 active:bg-white/15"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface XYPadProps {
+  fx: { crush: number; reverb: number; echo: number; flanger: number } | undefined;
+  onFxChange: ((type: 'crush' | 'reverb' | 'echo' | 'flanger', val: number) => void) | undefined;
+  accentColor: string;
+}
+
+function XYPad({ fx, onFxChange, accentColor }: XYPadProps) {
+  const [isPressing, setIsPressing] = useState(false);
+  const [coords, setCoords] = useState({ x: 0.0, y: 0.0 });
+
+  useEffect(() => {
+    if (!isPressing && fx) {
+      const curX = (fx.echo || 0) / 0.8;
+      const curY = (fx.flanger || 0) / 0.8;
+      setCoords({ x: Math.min(1, Math.max(0, curX)), y: Math.min(1, Math.max(0, curY)) });
+    }
+  }, [fx, isPressing]);
+
+  const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    setIsPressing(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect) return;
+
+    const updatePoint = (clientX: number, clientY: number) => {
+      const xNorm = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const yNorm = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+      
+      setCoords({ x: xNorm, y: yNorm });
+      
+      onFxChange?.('echo', xNorm * 0.8);
+      onFxChange?.('flanger', yNorm * 0.8);
+    };
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    updatePoint(clientX, clientY);
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      updatePoint(moveEvent.clientX, moveEvent.clientY);
+    };
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.cancelable) moveEvent.preventDefault();
+      updatePoint(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+    };
+
+    const handleStop = () => {
+      setIsPressing(false);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleStop);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleStop);
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleStop);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleStop);
+  };
+
+  const handleReset = () => {
+    setCoords({ x: 0, y: 0 });
+    onFxChange?.('echo', 0);
+    onFxChange?.('flanger', 0);
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 h-full justify-between select-none">
+      <div className="flex justify-between items-center px-1">
+        <span className="text-[6.5px] font-black text-white/30 font-mono tracking-wider uppercase">XY CONTROL // DELAY (X) × PHASER (Y)</span>
+        <button 
+          onClick={handleReset}
+          className="text-[6.5px] font-mono font-black px-1 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 active:scale-95 transition-all uppercase leading-none py-0.5"
+        >
+          Reset pad
+        </button>
+      </div>
+
+      <div 
+        className="relative flex-1 min-h-[90px] h-[95px] bg-black/60 rounded border border-white/5 overflow-hidden cursor-crosshair touch-none"
+        onMouseDown={handleStart}
+        onTouchStart={handleStart}
+      >
+        <div className="absolute inset-0 grid grid-cols-4 grid-rows-4 pointer-events-none opacity-5">
+          {[...Array(16)].map((_, i) => (
+            <div key={i} className="border border-white/10" />
+          ))}
+        </div>
+
+        {isPressing && (
+          <>
+            <div className="absolute inset-x-0 h-[1px] bg-white/10 pointer-events-none" style={{ bottom: `${coords.y * 100}%` }} />
+            <div className="absolute inset-y-0 w-[1px] bg-white/10 pointer-events-none" style={{ left: `${coords.x * 100}%` }} />
+          </>
+        )}
+
+        <div 
+          className="absolute w-3.5 h-3.5 rounded-full border-2 -translate-x-1/2 translate-y-1/2 flex items-center justify-center"
+          style={{ 
+            left: `${coords.x * 100}%`, 
+            bottom: `${coords.y * 100}%`, 
+            borderColor: accentColor,
+            boxShadow: `0 0 10px ${accentColor}`,
+            backgroundColor: isPressing ? `${accentColor}25` : `${accentColor}10`
+          }}
+        >
+          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+        </div>
+
+        <div className="absolute bottom-1 left-1.5 text-[5px] font-mono text-white/10 uppercase">MIN</div>
+        <div className="absolute top-1 right-1.5 text-[5px] font-mono text-white/10 uppercase">MAX SWEEP</div>
+      </div>
+    </div>
+  );
+}
+
 export default function Deck({ 
   id, trackUrl, isPlaying, isLoading, onPlayPause, onSync, 
   playbackRate, onRateChange, onPitchBend, fx, onFxChange, 
@@ -295,6 +516,7 @@ export default function Deck({
   onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer, isSynced = false
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [fxViewMode, setFxViewMode] = useState<'KNOBS' | 'SLIDERS' | 'XY_PAD'>('KNOBS');
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
   const glowClass = id === 'A' ? 'active-glow-cyan' : 'active-glow-purple';
 
@@ -534,46 +756,117 @@ export default function Deck({
                     ))}
                 </div>
              </div>
-
-             {/* FX Knobs */}
-             <div className="grid grid-cols-2 gap-4 flex-1 items-center">
-                <Knob 
-                    label="ECHO"
-                    min={0}
-                    max={0.8}
-                    value={fx?.echo || 0} 
-                    onChange={(v) => onFxChange?.('echo', v)} 
-                    size="md"
-                    color={accentColor}
-                />
-                <Knob 
-                    label="FLAN"
-                    min={0}
-                    max={0.8}
-                    value={fx?.flanger || 0} 
-                    onChange={(v) => onFxChange?.('flanger', v)} 
-                    size="md"
-                    color={accentColor}
-                />
-                <Knob 
-                    label="BIT"
-                    min={0}
-                    max={1}
-                    value={fx?.crush || 0} 
-                    onChange={(v) => onFxChange?.('crush', v)} 
-                    size="md"
-                    color={accentColor}
-                />
-                <Knob 
-                    label="VERB"
-                    min={0}
-                    max={1}
-                    value={fx?.reverb || 0} 
-                    onChange={(v) => onFxChange?.('reverb', v)} 
-                    size="md"
-                    color={accentColor}
-                />
+             {/* FX Layout View Selector */}
+             <div className="flex gap-1 bg-black/40 border border-white/5 p-1 rounded-sm mt-1">
+                {(['KNOBS', 'SLIDERS', 'XY_PAD'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setFxViewMode(mode)}
+                    className={`flex-1 py-1 text-[7px] font-black uppercase tracking-widest rounded-sm transition-all border ${
+                      fxViewMode === mode 
+                        ? (id === 'A' 
+                          ? 'bg-brand-cyan/25 text-brand-cyan border-brand-cyan/30 shadow-[0_0_8px_rgba(0,245,255,0.15)]' 
+                          : 'bg-brand-purple/25 text-brand-purple border-brand-purple/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]')
+                        : 'text-white/30 hover:text-white/60 hover:bg-white/5 border-transparent'
+                    }`}
+                  >
+                    {mode === 'XY_PAD' ? 'XY Pad' : mode}
+                  </button>
+                ))}
              </div>
+
+             {/* Dynamic FX Controls depending on chosen View Mode */}
+             {fxViewMode === 'KNOBS' && (
+               <div className="grid grid-cols-2 gap-4 flex-1 items-center">
+                  <Knob 
+                      label="ECHO"
+                      min={0}
+                      max={0.8}
+                      value={fx?.echo || 0} 
+                      onChange={(v) => onFxChange?.('echo', v)} 
+                      size="md"
+                      color={accentColor}
+                      defaultValue={0}
+                  />
+                  <Knob 
+                      label="FLAN"
+                      min={0}
+                      max={0.8}
+                      value={fx?.flanger || 0} 
+                      onChange={(v) => onFxChange?.('flanger', v)} 
+                      size="md"
+                      color={accentColor}
+                      defaultValue={0}
+                  />
+                  <Knob 
+                      label="BIT"
+                      min={0}
+                      max={1}
+                      value={fx?.crush || 0} 
+                      onChange={(v) => onFxChange?.('crush', v)} 
+                      size="md"
+                      color={accentColor}
+                      defaultValue={0}
+                  />
+                  <Knob 
+                      label="VERB"
+                      min={0}
+                      max={1}
+                      value={fx?.reverb || 0} 
+                      onChange={(v) => onFxChange?.('reverb', v)} 
+                      size="md"
+                      color={accentColor}
+                      defaultValue={0}
+                  />
+               </div>
+             )}
+
+             {fxViewMode === 'SLIDERS' && (
+               <div className="grid grid-cols-4 gap-2 flex-1 items-stretch py-2">
+                  <InteractiveSlider 
+                      label="ECHO"
+                      min={0}
+                      max={0.8}
+                      value={fx?.echo || 0} 
+                      onChange={(v) => onFxChange?.('echo', v)} 
+                      color={accentColor}
+                  />
+                  <InteractiveSlider 
+                      label="FLAN"
+                      min={0}
+                      max={0.8}
+                      value={fx?.flanger || 0} 
+                      onChange={(v) => onFxChange?.('flanger', v)} 
+                      color={accentColor}
+                  />
+                  <InteractiveSlider 
+                      label="BIT"
+                      min={0}
+                      max={1}
+                      value={fx?.crush || 0} 
+                      onChange={(v) => onFxChange?.('crush', v)} 
+                      color={accentColor}
+                  />
+                  <InteractiveSlider 
+                      label="VERB"
+                      min={0}
+                      max={1}
+                      value={fx?.reverb || 0} 
+                      onChange={(v) => onFxChange?.('reverb', v)} 
+                      color={accentColor}
+                  />
+               </div>
+             )}
+
+             {fxViewMode === 'XY_PAD' && (
+               <div className="flex-1 py-1 flex flex-col justify-center">
+                 <XYPad 
+                   fx={fx} 
+                   onFxChange={onFxChange} 
+                   accentColor={accentColor} 
+                 />
+               </div>
+             )}
              
              <button 
                 onClick={onSaveConfig}

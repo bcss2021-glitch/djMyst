@@ -705,12 +705,10 @@ export default function App() {
   };
 
   const handleRoll = (deck: 'A' | 'B', division: '1/4' | '1/8' | '1/16' | null) => {
-    // If there is already an active beat roll, clear it first to align correct playing offsets
-    if (rollState[deck]) {
-      audioEngine.clearLoop(deck);
-    }
-
     if (!division) {
+      if (rollState[deck]) {
+        audioEngine.clearLoop(deck);
+      }
       setRollState(prev => ({ ...prev, [deck]: null }));
       return;
     }
@@ -1269,7 +1267,7 @@ export default function App() {
                   onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, A: true }))}
                   onPlayPause={() => togglePlay('A')}
                   onSync={() => handleSync('A')}
-                  isSynced={syncActive.A && !!trackInfo.A.url && !!trackInfo.B.url}
+                  isSynced={syncActive.A && playingState.A && playingState.B && !!trackInfo.A.url && !!trackInfo.B.url}
                   playbackRate={playbackRates.A}
                   onRateChange={(v) => handleRateChange('A', v)}
                   onPitchBend={(v) => handlePitchBend('A', v)}
@@ -1337,7 +1335,7 @@ export default function App() {
                 onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, B: true }))}
                 onPlayPause={() => togglePlay('B')}
                 onSync={() => handleSync('B')}
-                isSynced={syncActive.B && !!trackInfo.A.url && !!trackInfo.B.url}
+                isSynced={syncActive.B && playingState.A && playingState.B && !!trackInfo.A.url && !!trackInfo.B.url}
                 playbackRate={playbackRates.B}
                 onRateChange={(v) => handleRateChange('B', v)}
                 onPitchBend={(v) => handlePitchBend('B', v)}

@@ -10,9 +10,10 @@ interface KnobProps {
   onChange: (val: number) => void;
   color?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
+  defaultValue?: number;
 }
 
-export default function Knob({ label, min = -20, max = 20, value, onChange, color = '#00f5ff', size = 'md' }: KnobProps) {
+export default function Knob({ label, min = -20, max = 20, value, onChange, color = '#00f5ff', size = 'md', defaultValue }: KnobProps) {
   const [isDragging, setIsDragging] = useState(false);
   const rotation = useMotionValue(0);
   
@@ -29,32 +30,27 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
     rotation.set(initialRotation);
   }, [value, min, max, rotation]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-    const startY = e.clientY;
-    const startVal = value;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = startY - moveEvent.clientY;
-      const range = max - min;
-      const sensitivity = 1.0;
-      let newVal = startVal + (deltaY / 200) * range * sensitivity;
-      newVal = Math.max(min, Math.min(max, newVal));
-      onChange(newVal);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+  const resetToDefault = () => {
+    const cleanDefault = defaultValue !== undefined ? defaultValue : (min >= 0 ? min : 0);
+    onChange(cleanDefault);
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resetToDefault();
+  };
+
+  // Double tap detection for touch screens
+  let lastTap = 0;
   const handleTouchStart = (e: React.TouchEvent) => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      e.preventDefault();
+      resetToDefault();
+      return;
+    }
+    lastTap = now;
+
     setIsDragging(true);
     const startY = e.touches[0].clientY;
     const startVal = value;
@@ -66,7 +62,7 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
       const deltaY = startY - moveEvent.touches[0].clientY;
       const range = max - min;
       const sensitivity = 1.0;
-      let newVal = startVal + (deltaY / 200) * range * sensitivity;
+      let newVal = startVal + (deltaY / 110) * range * sensitivity;
       newVal = Math.max(min, Math.min(max, newVal));
       onChange(newVal);
     };
@@ -81,14 +77,41 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
     window.addEventListener('touchend', handleTouchEnd);
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const startY = e.clientY;
+    const startVal = value;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = startY - moveEvent.clientY;
+      const range = max - min;
+      const sensitivity = 1.0;
+      let newVal = startVal + (deltaY / 110) * range * sensitivity;
+      newVal = Math.max(min, Math.min(max, newVal));
+      onChange(newVal);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   const currentRotation = useTransform(rotation, (r) => `${r}deg`);
 
   return (
     <div className={`flex flex-col items-center select-none ${size === 'xs' || size === 'sm' ? 'gap-0.5' : 'gap-1'}`}>
       <div 
-        className={`${sizeClasses.track} relative rounded-full bg-black/40 border border-white/5 shadow-inner flex items-center justify-center cursor-ns-resize`}
+        className={`${sizeClasses.track} relative rounded-full bg-black/40 border border-white/5 shadow-inner flex items-center justify-center cursor-ns-resize touch-none`}
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
+        onDoubleClick={handleDoubleClick}
+        title="Drag up/down to adjust. Double-click/tap to reset default."
       >
         {/* Scale marks */}
         <div className="absolute inset-0 pointer-events-none opacity-10">
