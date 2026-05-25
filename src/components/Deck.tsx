@@ -17,22 +17,32 @@ interface JogWheelProps {
     rotation: number;
     onPitchBend?: (bend: number) => void;
     onPadTrigger?: (sample: string) => void;
+    onScratchDrag?: (sec: number) => void;
 }
 
-function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, onPitchBend, onPadTrigger }: JogWheelProps & { onClick?: () => void }) {
+function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, onPitchBend, onPadTrigger, onScratchDrag }: JogWheelProps & { onClick?: () => void }) {
   const [bend, setBend] = useState(1);
   const [isScratching, setIsScratching] = useState(false);
 
   const handlePan = (_: any, info: any) => {
-    // Map vertical movement to pitch bend +/- 8%
-    // 100px = 8% change
-    const deltaY = info.offset.y;
-    const newBend = 1 - (deltaY / 1250); 
+    const deltaX = info.delta.x || 0;
+    const deltaY = info.delta.y || 0;
+    
+    // Rotate/Gesture scratch: convert pixels of travel to seconds delta on track playhead
+    const totalDelta = Math.abs(deltaX) + Math.abs(deltaY);
+    if (totalDelta > 1 && onScratchDrag) {
+      const secDelta = (deltaX - deltaY) * 0.005; 
+      onScratchDrag(secDelta);
+    }
+
+    // Standard pitch bend behavior
+    const deltaYOffset = info.offset.y;
+    const newBend = 1 - (deltaYOffset / 1250); 
     const clampedBend = Math.max(0.92, Math.min(1.08, newBend));
     setBend(clampedBend);
     onPitchBend?.(clampedBend);
 
-    // Scratch sound logic: trigger based on movement intensity
+    // Trigger raw scratch sound if moving quickly
     const velocity = Math.abs(info.velocity.y || 0) + Math.abs(info.velocity.x || 0);
     if (velocity > 400 && !isScratching) {
       audioEngine.scratchWheel(velocity);
@@ -127,6 +137,13 @@ interface DeckProps {
   onLoopOut?: () => void;
   onExitLoop?: () => void;
   resolvedVolume?: number;
+  onRewind?: () => void;
+  onCuePress?: () => void;
+  onCueRelease?: () => void;
+  isCueActive?: boolean;
+  onReverseToggle?: () => void;
+  isReversed?: boolean;
+  onScratchDrag?: (sec: number) => void;
 }
 
 export default function Deck({ 
@@ -134,7 +151,9 @@ export default function Deck({
   playbackRate, onRateChange, onPitchBend, fx, onFxChange, 
   onPadTrigger, onRoll, activeRoll, onSaveConfig, sourceType = 'AUDIO', externalUrl,
   keyLock, onKeyLockToggle, gain = 1, onGainChange, hotCues = [], onHotCue, onClearCues,
-  loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1
+  loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1,
+  onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
+  onScratchDrag
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
@@ -209,6 +228,7 @@ export default function Deck({
                 rotation={0} 
                 onPitchBend={onPitchBend}
                 onPadTrigger={onPadTrigger}
+                onScratchDrag={onScratchDrag}
                 onClick={() => onPadTrigger('scratch')} 
             />
             
@@ -369,10 +389,54 @@ export default function Deck({
               <button onClick={onSync} className={`flex-1 px-3 bg-white/5 border border-white/10 rounded-sm text-[8px] font-black tracking-widest text-white/40 hover:text-brand-cyan transition-all tactile-button hover:border-brand-cyan/30 uppercase`}>SYNC</button>
             </div>
             
-            <div className="flex gap-2">
-                <button className={`cue-button w-12 h-12 text-[10px] tactile-button ${id === 'A' ? 'bg-blue-600 border-blue-400' : 'bg-purple-600 border-purple-400'}`}>CUE</button>
+            <div className="flex gap-1.5 items-center">
+                {/* Quick Rewind button */}
+                <button 
+                    onClick={onRewind}
+                    className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20 active:scale-95 transition-all text-[8px] font-black tactile-button"
+                    title="Rewind track to start (0:00)"
+                >
+                    <Rewind size={14} fill="currentColor" />
+                </button>
+                
+                {/* Hold/Strike Cue Button */}
+                <button 
+                    onMouseDown={onCuePress}
+                    onMouseUp={onCueRelease}
+                    onTouchStart={(e) => {
+                      if (e.cancelable) e.preventDefault();
+                      onCuePress?.();
+                    }}
+                    onTouchEnd={(e) => {
+                      if (e.cancelable) e.preventDefault();
+                      onCueRelease?.();
+                    }}
+                    className={`cue-button w-12 h-12 text-[10px] font-black uppercase tracking-widest border transition-all duration-150 rounded-full flex flex-col items-center justify-center tactile-button select-none ${
+                      isCueActive 
+                        ? (id === 'A' ? 'bg-blue-500 border-blue-400 text-white shadow-[0_0_12px_rgba(59,130,246,0.6)]' : 'bg-purple-500 border-purple-400 text-white shadow-[0_0_12px_rgba(168,85,247,0.6)]')
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-700/80'
+                    }`}
+                    title="Press to jump to Cue Point, or hold when paused to preview starting scratch"
+                >
+                    <span className="text-[10px]">CUE</span>
+                </button>
+
+                {/* Main Play/Pause */}
                 <button onClick={onPlayPause} className="play-button w-12 h-12 tactile-button">
                     {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} className="translate-x-0.5" fill="currentColor" />}
+                </button>
+
+                {/* Reverse Toggle Button */}
+                <button 
+                  onClick={onReverseToggle}
+                  className={`w-8 h-8 rounded-full border flex items-center justify-center text-[8px] font-black tracking-tighter uppercase transition-all tactile-button ${
+                    isReversed 
+                      ? (id === 'A' ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'bg-pink-500/20 border-pink-500 text-pink-400 shadow-[0_0_8px_rgba(236,72,153,0.3)]')
+                      : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'
+                  }`}
+                  title="Reverse playback direction"
+                >
+                  REV
                 </button>
             </div>
         </div>

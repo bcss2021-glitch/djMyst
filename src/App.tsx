@@ -39,6 +39,9 @@ const DEFAULT_TRACKS = [
 export default function App() {
   const [isStarted, setIsStarted] = useState(false);
   const [playingState, setPlayingState] = useState({ A: false, B: false });
+  const [cuePoints, setCuePoints] = useState<Record<'A' | 'B', number>>({ A: 0, B: 0 });
+  const [reverseStates, setReverseStates] = useState<Record<'A' | 'B', boolean>>({ A: false, B: false });
+  const [isCueActive, setIsCueActive] = useState<Record<'A' | 'B', boolean>>({ A: false, B: false });
   const [browserHeight, setBrowserHeight] = useState(200);
   const [isTempExpanded, setIsTempExpanded] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -74,8 +77,8 @@ export default function App() {
   const [externalUrls, setExternalUrls] = useState<{ A: string | null, B: string | null }>({ A: null, B: null });
 
   const [trackInfo, setTrackInfo] = useState({
-    A: { title: 'READY', url: null as string | null, id: null as string | null, artist: null as string | null },
-    B: { title: 'READY', url: null as string | null, id: null as string | null, artist: null as string | null },
+    A: { title: 'READY', url: null as string | null, id: null as string | null, artist: null as string | null, duration: 0 },
+    B: { title: 'READY', url: null as string | null, id: null as string | null, artist: null as string | null, duration: 0 },
   });
   const [eqState, setEqState] = useState({
     A: { low: 0, mid: 0, high: 0 },
@@ -135,7 +138,7 @@ export default function App() {
       setExternalUrls(prev => ({ ...prev, [deck]: urlOrId }));
       setTrackInfo(prev => ({ 
         ...prev, 
-        [deck]: { title: name, url: urlOrId, id: urlOrId } 
+        [deck]: { title: name, url: urlOrId, id: urlOrId, artist: 'External', duration: 0 } 
       }));
       // Stop the audio engine player if it was playing
       audioEngine.stop(deck);
@@ -177,6 +180,8 @@ export default function App() {
 
       await audioEngine.loadTrack(deck, finalUrl);
       
+      const computedDuration = audioEngine.getDeck(deck).buffer.duration || 180;
+      
       // Re-apply current playback rate to the new track in the engine
       audioEngine.setPlaybackRate(deck, playbackRates[deck]);
       // Re-apply FX and EQ just in case loading reset anything
@@ -191,7 +196,7 @@ export default function App() {
       
       setTrackInfo(prev => ({ 
         ...prev, 
-        [deck]: { title: name, url: finalUrl, id: urlOrId, artist: isAudius ? 'Audius' : 'Local' } 
+        [deck]: { title: name, url: finalUrl, id: urlOrId, artist: isAudius ? 'Audius' : 'Local', duration: computedDuration } 
       }));
 
       // Apply saved config if available
@@ -212,7 +217,7 @@ export default function App() {
 
       setTrackInfo(prev => ({
         ...prev,
-        [deck]: { title: name, url: finalUrl, id: urlOrId, artist: isAudius ? 'Audius' : 'Local' }
+        [deck]: { title: name, url: finalUrl, id: urlOrId, artist: isAudius ? 'Audius' : 'Local', duration: computedDuration }
       }));
 
       // Add to history
@@ -484,6 +489,79 @@ export default function App() {
     setXfaderCurve(0.5);
   };
 
+  const handleRewind = (deck: 'A' | 'B') => {
+    try {
+      audioEngine.seek(deck, 0);
+    } catch (e) {
+      console.error(`Rewind failed on deck ${deck}:`, e);
+    }
+  };
+
+  const handleCuePress = (deck: 'A' | 'B') => {
+    if (!trackInfo[deck].url || loadingState[deck]) return;
+    try {
+      const isCurrentlyPlaying = playingState[deck];
+      if (isCurrentlyPlaying) {
+        audioEngine.playPause(deck);
+        setPlayingState(prev => ({ ...prev, [deck]: false }));
+        audioEngine.seek(deck, cuePoints[deck]);
+      } else {
+        const currentPos = audioEngine.getPosition(deck);
+        let activeCue = cuePoints[deck];
+        
+        if (Math.abs(currentPos - activeCue) > 0.25) {
+          activeCue = currentPos;
+          setCuePoints(prev => ({ ...prev, [deck]: currentPos }));
+        }
+        
+        setIsCueActive(prev => ({ ...prev, [deck]: true }));
+        audioEngine.seek(deck, activeCue);
+        audioEngine.playPause(deck);
+      }
+    } catch (e) {
+      console.error(`Cue press error on deck ${deck}:`, e);
+    }
+  };
+
+  const handleCueRelease = (deck: 'A' | 'B') => {
+    if (!trackInfo[deck].url || loadingState[deck]) return;
+    try {
+      if (isCueActive[deck]) {
+        audioEngine.playPause(deck);
+        audioEngine.seek(deck, cuePoints[deck]);
+        setIsCueActive(prev => ({ ...prev, [deck]: false }));
+      }
+    } catch (e) {
+      console.error(`Cue release error on deck ${deck}:`, e);
+    }
+  };
+
+  const handleReverseToggle = (deck: 'A' | 'B') => {
+    try {
+      const targetState = !reverseStates[deck];
+      audioEngine.setReverse(deck, targetState);
+      setReverseStates(prev => ({ ...prev, [deck]: targetState }));
+    } catch (e) {
+      console.error(`Reverse toggle error on deck ${deck}:`, e);
+    }
+  };
+
+  const handleScratchDrag = (deck: 'A' | 'B', deltaSeconds: number) => {
+    try {
+      audioEngine.scratchSeek(deck, deltaSeconds);
+    } catch (e) {
+      console.error(`Scratch drag error on deck ${deck}:`, e);
+    }
+  };
+
+  const handleWaveformSeek = (deck: 'A' | 'B', time: number) => {
+    try {
+      audioEngine.seek(deck, time);
+    } catch (e) {
+      console.error(`Waveform seek error on deck ${deck}:`, e);
+    }
+  };
+
   const handlePitchBend = (deck: 'A' | 'B', multiplier: number) => {
     audioEngine.setPitchBend(deck, multiplier);
   };
@@ -740,9 +818,18 @@ export default function App() {
                <Visualizer deck={deck} color={deck === 'A' ? "#3b82f6" : "#a855f7"} isPlaying={playingState[deck]} sourceType={deckSources[deck]} />
             </div>
             
-            <div className="absolute inset-0 flex items-center z-10 pointer-events-none">
-              <div className="h-full w-[1px] bg-white/20 z-10 left-1/2 absolute"></div>
-              <Waveform url={trackInfo[deck].url} isPlaying={playingState[deck]} color={deck === 'A' ? "#3b82f6" : "#a855f7"} deckId={deck} />
+            <div className="absolute inset-0 flex items-center z-10">
+              <div className="h-full w-[1px] bg-white/20 z-10 left-1/2 absolute pointer-events-none"></div>
+              <Waveform 
+                url={trackInfo[deck].url} 
+                isPlaying={playingState[deck]} 
+                color={deck === 'A' ? "#3b82f6" : "#a855f7"} 
+                deckId={deck} 
+                onSeek={(time) => handleWaveformSeek(deck, time)}
+                duration={trackInfo[deck].duration}
+                cuePoint={cuePoints[deck]}
+                hotCues={hotCues[trackInfo[deck].id || ''] || []}
+              />
             </div>
             
             <div className={`absolute top-2 left-3 z-20 text-[10px] font-black italic tracking-[0.1em] uppercase transition-all ${playingState[deck] ? (deck === 'A' ? 'text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]') : (trackInfo[deck].url ? 'text-white/80' : 'text-white/20')}`}>
@@ -810,6 +897,13 @@ export default function App() {
                   onLoopOut={() => handleLoopOut('A')}
                   onExitLoop={() => handleExitLoop('A')}
                   resolvedVolume={getResolvedVolume('A')}
+                  onRewind={() => handleRewind('A')}
+                  onCuePress={() => handleCuePress('A')}
+                  onCueRelease={() => handleCueRelease('A')}
+                  isCueActive={isCueActive.A}
+                  onReverseToggle={() => handleReverseToggle('A')}
+                  isReversed={reverseStates.A}
+                  onScratchDrag={(sec) => handleScratchDrag('A', sec)}
                 />
           </div>
 
@@ -866,6 +960,13 @@ export default function App() {
                 onLoopOut={() => handleLoopOut('B')}
                 onExitLoop={() => handleExitLoop('B')}
                 resolvedVolume={getResolvedVolume('B')}
+                onRewind={() => handleRewind('B')}
+                onCuePress={() => handleCuePress('B')}
+                onCueRelease={() => handleCueRelease('B')}
+                isCueActive={isCueActive.B}
+                onReverseToggle={() => handleReverseToggle('B')}
+                isReversed={reverseStates.B}
+                onScratchDrag={(sec) => handleScratchDrag('B', sec)}
               />
           </div>
         </div>

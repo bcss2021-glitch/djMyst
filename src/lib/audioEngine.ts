@@ -173,7 +173,7 @@ export class AudioEngine {
     }
   }
 
-  private getDeck(deck: 'A' | 'B') {
+   getDeck(deck: 'A' | 'B') {
     switch (deck) {
       case 'A': return this.deckA;
       case 'B': return this.deckB;
@@ -386,6 +386,32 @@ export class AudioEngine {
       // If already playing, don't restart too often but update rate?
       // Actually Players.player(name) restarts by default.
       player.start();
+    }
+  }
+
+  setReverse(deck: 'A' | 'B', enabled: boolean) {
+    try {
+      const player = this.getDeck(deck);
+      player.reverse = enabled;
+    } catch (e) {
+      console.error(`Failed to set reverse on deck ${deck}:`, e);
+    }
+  }
+
+  scratchSeek(deck: 'A' | 'B', deltaSeconds: number) {
+    const player = this.getDeck(deck);
+    if (!player.buffer.loaded || player.buffer.duration === 0) return;
+    
+    try {
+      const current = this.getPosition(deck);
+      let target = current + deltaSeconds;
+      
+      if (target < 0) target = 0;
+      if (target > player.buffer.duration) target = player.buffer.duration - 0.05;
+      
+      this.seek(deck, target);
+    } catch (e) {
+      console.warn(`Scratch seek bounds check error on deck ${deck}:`, e);
     }
   }
 

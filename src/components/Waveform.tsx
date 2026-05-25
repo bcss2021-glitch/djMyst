@@ -7,9 +7,13 @@ interface WaveformProps {
   isPlaying: boolean;
   color?: string;
   deckId?: 'A' | 'B';
+  onSeek?: (time: number) => void;
+  duration?: number;
+  cuePoint?: number | null;
+  hotCues?: number[];
 }
 
-export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: WaveformProps) {
+export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, onSeek, duration, cuePoint, hotCues }: WaveformProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -26,7 +30,7 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: 
       barGap: 1,
       height: 40,
       normalize: true,
-      interact: false,
+      interact: true, // Enable clicking on the spectrum
       cursorWidth: 1
     });
 
@@ -35,6 +39,13 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: 
     } catch (e) {
       console.warn("WaveSurfer setVolume failed on creation", e);
     }
+
+    wavesurferRef.current.on('interaction', (newProgress) => {
+      if (onSeek) {
+        const dur = wavesurferRef.current?.getDuration() || duration || 0;
+        onSeek(newProgress * dur);
+      }
+    });
 
     return () => {
       wavesurferRef.current?.destroy();
@@ -118,7 +129,7 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: 
       <div className="absolute inset-0 bg-[#050508]" />
       <div className="scanline opacity-10" />
       
-      <div ref={containerRef} className="absolute inset-x-0 bottom-0 top-0 opacity-40 z-10" />
+      <div ref={containerRef} className="absolute inset-x-0 bottom-0 top-0 opacity-40 z-10 cursor-pointer" />
       <canvas 
         ref={canvasRef} 
         width={400} 
@@ -126,8 +137,36 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: 
         className="absolute inset-0 w-full h-full pointer-events-none mix-blend-screen z-20"
       />
       
+      {/* Active CUE point visualization */}
+      {duration && duration > 0 && cuePoint !== undefined && cuePoint !== null && (
+        <div 
+          className="absolute top-0 bottom-0 w-[2px] bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.9)] z-30 pointer-events-none"
+          style={{ left: `${(cuePoint / duration) * 100}%` }}
+        >
+          <div className="absolute top-0.5 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[6px] font-black px-1 py-0.2 rounded-sm select-none shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+            CUE
+          </div>
+        </div>
+      )}
+
+      {/* Active Hot Cues visualization */}
+      {duration && duration > 0 && hotCues && hotCues.map((hc, idx) => {
+        if (hc === undefined || hc === null) return null;
+        return (
+          <div 
+            key={idx}
+            className="absolute top-0 bottom-0 w-[1.5px] bg-red-400 shadow-[0_0_6px_rgba(239,68,68,0.8)] z-30 pointer-events-none"
+            style={{ left: `${(hc / duration) * 100}%` }}
+          >
+            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[6px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-sm select-none shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+              HC{idx + 1}
+            </div>
+          </div>
+        );
+      })}
+      
       {/* Playback pointer */}
-      <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-white/20 z-30" />
+      <div className="absolute top-0 bottom-0 left-1/2 w-[1px] bg-white/20 z-30 pointer-events-none" />
     </div>
   );
 }
