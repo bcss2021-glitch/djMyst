@@ -137,6 +137,7 @@
       <a href="#fx" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">06 // FX Engine & Rolls</a>
       <a href="#crate" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">07 // Sound Libraries</a>
       <a href="#masterclass" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">08 // Step-By-Step Mix</a>
+      <a href="#mobile" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">09 // Mobile App Compilation</a>
       
       <!-- Utility Warning Bezel -->
       <div class="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg space-y-2 mt-8">
@@ -617,14 +618,105 @@
         </div>
       </section>
 
+      <!-- SECTION 09 -->
+      <section id="mobile" class="space-y-6 pt-10 border-t border-white/5">
+        <h3 class="text-white font-display font-medium text-lg leading-none tracking-tight flex items-center gap-3">
+          <span class="text-brand-cyan text-sm font-mono tracking-widest">09 //</span> 
+          MOBILE COMPILATION ENGINE
+        </h3>
+        <p class="text-zinc-400 text-xs">
+          Want to take the DJ Studio console on the road? The modern front-end build and pure client-side Web Audio DSP engine makes it highly compatible with cross-platform wrappers to launch natively on both Android and iOS devices.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Capacitor Wrap -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-3 font-mono text-xs">
+            <h4 class="text-brand-cyan font-display font-bold uppercase text-[10px] tracking-widest">PREFERRED METHOD: CAPACITOR WRAPPER</h4>
+            <p class="text-zinc-400 text-[11px] leading-relaxed font-sans">
+              Capacitor (by Ionic) is the modern industry standard to compile React & Vite apps straight into native iOS and Android binaries.
+            </p>
+            <div class="space-y-2 text-[10.5px]">
+              <div>
+                <span class="text-white font-bold block">1. INGEST PACKAGES:</span>
+                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npm install @capacitor/core @capacitor/cli</code>
+              </div>
+              <div>
+                <span class="text-white font-bold block">2. INITIALIZE IN PROJECT:</span>
+                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npx cap init "DJ Studio" "com.dargonheart.djstudio" --web-dir=dist</code>
+              </div>
+              <div>
+                <span class="text-white font-bold block">3. INSTALL NATIVE ENGINES:</span>
+                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npm install @capacitor/android @capacitor/ios</code>
+              </div>
+              <div>
+                <span class="text-white font-bold block">4. COMPILE & SYNC BINARIES:</span>
+                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npm run build &amp;&amp; npx cap add android &amp;&amp; npx cap add ios &amp;&amp; npx cap sync</code>
+              </div>
+              <div>
+                <span class="text-white font-bold block">5. SPIN UP NATIVE IDE:</span>
+                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npx cap open android (Android Studio) <br>npx cap open ios (Xcode)</code>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cordova or PWA Alternatives -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-4 font-mono text-xs">
+            <h4 class="text-brand-purple font-display font-bold uppercase text-[10px] tracking-widest">ALTERNATIVE PIPELINES & PWAS</h4>
+            
+            <div class="space-y-2">
+              <span class="text-zinc-100 font-bold block">● PROGRESSIVE WEB APP (PWA):</span>
+              <p class="text-zinc-400 text-[11px] leading-relaxed font-sans">
+                You can add a standard service worker and manifest to compile this into a standalone PWA. This lets dual deck users click "Add to Home Screen" straight from Safari, Chrome, or Samsung Internet to run the console full-screen offline.
+              </p>
+            </div>
+
+            <div class="space-y-2 pt-2 border-t border-white/5">
+              <span class="text-zinc-100 font-bold block">● APACHE CORDOVA BUILD:</span>
+              <p class="text-zinc-400 text-[11px] leading-relaxed font-sans font-normal">
+                Older but highly stable package pipeline. To pack via Cordova, modify the <code class="text-brand-purple">vite.config.ts</code> base paths to utilize relative locations (<code class="text-brand-purple">base: './'</code>), configure the cordova <code class="text-zinc-200">config.xml</code>, and call <code class="text-zinc-300">cordova build android --release</code> to spit out a production-signed APK.
+              </p>
+            </div>
+
+            <div class="p-2 bg-yellow-500/5 border border-yellow-500/10 rounded-md text-[10px] text-zinc-400 font-sans">
+              <strong class="text-yellow-500 uppercase font-mono block mb-0.5">⚠️ WEB AUDIO LATENCY TIP:</strong>
+              Mobile Safari and Chrome restrict AudioContext playback until the user taps/clicks the canvas in any form. The application handles this natively with a primary touch/click detector!
+            </div>
+          </div>
+        </div>
+      </section>
+
     </div>
   </main>
 
   <!-- Footer block -->
   <footer class="border-t border-white/5 py-12 px-6 bg-[#0a0a0d] mt-24 text-center text-xs font-mono text-zinc-500">
-    <div class="max-w-6xl mx-auto space-y-3">
-      <p>PRO-GRADE DUAL DECK DJ CONSOLE // INSTRUCTION & CALIBRATION REFERENCE FILE</p>
-      <p>Created with precision and hardware integrity. Review and test every dial directly on the live dashboard.</p>
+    <div class="max-w-4xl mx-auto space-y-6">
+      
+      <!-- Collaborative Engineering Credits -->
+      <div class="bg-[#050508] border border-white/5 p-6 rounded-lg text-left space-y-4 max-w-2xl mx-auto">
+        <span class="text-zinc-500 font-bold block tracking-widest text-[9px] uppercase border-b border-white/5 pb-2">COLLABORATIVE DESIGN & ENGINEERING LEADS</span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div class="space-y-1">
+            <span class="text-brand-cyan font-bold block text-sm tracking-wide">DARGONHEART</span>
+            <a href="mailto:visiolucis2025@gmail.com" class="text-zinc-400 hover:text-brand-cyan transition-colors text-xs block">visiolucis2025@gmail.com</a>
+            <p class="text-zinc-500 text-[11px] mt-1 font-sans">
+              Lead concept director, master deck designer, custom FX architecture inventor, and live user experience supervisor.
+            </p>
+          </div>
+          <div class="space-y-1 border-t sm:border-y-0 sm:border-l border-white/5 pt-4 sm:pt-0 sm:pl-6">
+            <span class="text-brand-purple font-bold block text-sm tracking-wide">GEMINI</span>
+            <span class="text-zinc-400 block text-xs">Google AI Studio Build</span>
+            <p class="text-zinc-500 text-[11px] mt-1 font-sans">
+              Autonomous full-stack engineer and DSP audio integrator, implementing high-speed waveforms, live BPM analysis, and digital filtering.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-1 text-zinc-600">
+        <p>PRO-GRADE DUAL DECK DJ CONSOLE // INSTRUCTION & CALIBRATION REFERENCE FILE</p>
+        <p>Created in deep code-collaboration with precision and hardware integrity. All rights reserved.</p>
+      </div>
     </div>
   </footer>
 

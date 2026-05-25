@@ -1,0 +1,50 @@
+                      DARGONHEART & GEMINI COOPERATIVE LICENSE
+                   ==============================================
+               (Hobbyist, Personal, and Small Group Development License)
+
+By using, modifying, or distributing this software (the "DJ Studio Operating 
+Console"), you agree to follow the terms and conditions outlined below.
+
+1. PERMISSIONS & MODIFICATIONS
+------------------------------
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files, to run, study, modify, 
+improve, and customize the source code. This permission is strictly for:
+  - Personal use and learning.
+  - Non-commercial hobbyist development.
+  - Interactive play and performance within small groups, classes, or local
+    communities.
+
+2. CONTRIBUTIONS, FEEDBACK & BUG REPORTING
+-----------------------------------------
+This software is a labor of love and collaborative engineering. To help sustain
+and scale the ecosystem:
+  - Any identified bugs, playback glitches, or potential optimization fixes 
+    MUST be directed by email to Dargonheart at: visiolucis2025@gmail.com
+  - Community feedback, feature requests, and refined code modifications are 
+    actively welcomed and encouraged to be sent to the address above.
+
+3. RE-DISTRIBUTION & ATTRIBUTION
+--------------------------------
+If you share or distribute modified versions of this repository, you must:
+  - Retain the original copyright notices and cooperative credit markers 
+    attributing conceptual design to "Dargonheart" and core code integration 
+    to "Gemini (via Google AI Studio)".
+  - Include this LICENSE file in all copies or substantial portions of the 
+    software.
+
+4. COMMERCIAL RESTRICTIONS
+--------------------------
+For commercial use, global distribution, or enterprise performance hosting 
+outside of small hobby clubs and educational group bounds, prior written 
+consent from Dargonheart (visiolucis2025@gmail.com) must be obtained.
+
+5. WARRANTY DISCLAIMER
+----------------------
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS (DARGONHEART OR GEMINI) BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.

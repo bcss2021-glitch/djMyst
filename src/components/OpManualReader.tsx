@@ -80,7 +80,7 @@ export default function OpManualReader() {
     },
     {
       id: 'crate',
-      title: '05 // MUSIC INSTAKE SHELF',
+      title: '05 // MUSIC INTAKE SHELF',
       subtitle: 'Manage local audio, cloud database links, and full set backups',
       deckAccent: 'both',
       content: 'Load tracks into your record crate using multiple input pipelines:',
@@ -90,6 +90,20 @@ export default function OpManualReader() {
         'YouTube & Spotify Ingest: Paste any third-party stream URL to track your references or overlay media.',
         'Local File Drops: Click "LOAD FILE" or drag-and-drop any standard WAV, MP3, or AIFF from your files.',
         'Session Backup: Save your currently programmed playlist and favorites lists to a JSON backup file on your PC. Import it anytime to restore your full crate state instantly.'
+      ]
+    },
+    {
+      id: 'mobile',
+      title: '06 // MOBILE APP COMPILATION (APK/IPA)',
+      subtitle: 'Compile to native Android Packages or iOS Xcode bundles',
+      deckAccent: 'both',
+      content: 'The standalone client-side nature makes this console fully compatible with native wrappers:',
+      bullets: [
+        'Capacitor Wrap: Run `npm i @capacitor/core @capacitor/cli` in your project folder.',
+        'Initialization: Run `npx cap init "DJ Studio" "com.dargonheart.djstudio" --web-dir=dist` to configure standard inputs.',
+        'Binary Target: Add packages via `npm i @capacitor/android @capacitor/ios`.',
+        'Sync Build: Run `npm run build` and then sync with `npx cap add android && npx cap sync`.',
+        'Android Studio / Xcode: Execute `npx cap open android` to test fully and output signed release APK.'
       ]
     }
   ];
@@ -230,14 +244,32 @@ export default function OpManualReader() {
           </div>
         )}
 
-        {/* Informational Callout / Hardware disclaimer */}
-        <div className="p-3 bg-zinc-950 rounded-lg border border-white/5 space-y-2 mt-4 text-center">
-          <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-1">
-            <ShieldCheck size={12} /> CERTIFIED DJ ENGINE
+        {/* Informational Callout / Hardware disclaimer & Credits */}
+        <div className="p-3 bg-zinc-950 rounded-lg border border-white/5 space-y-3 mt-4">
+          <div className="text-center space-y-1 pb-2 border-b border-white/5">
+            <div className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-1">
+              <ShieldCheck size={12} /> CERTIFIED DJ ENGINE
+            </div>
+            <p className="text-[9.5px] text-zinc-500 leading-relaxed font-mono">
+              DJ Studio operating console Rev 2.9 system architecture complies with advanced Web Audio DSP standards. Full-frequency sweeps and loop buffering optimized.
+            </p>
           </div>
-          <p className="text-[9.5px] text-zinc-500 leading-relaxed font-mono">
-            DJ Studio operating console Rev 2.9 system architecture complies with advanced Web Audio DSP standards. Full-frequency sweeps and loop buffering optimized.
-          </p>
+
+          <div className="space-y-1 px-1">
+            <span className="text-[7.5px] font-black font-mono tracking-widest text-zinc-500 uppercase block">COLLABORATIVE DESIGN & ENGINEERING DIRECTS</span>
+            <div className="grid grid-cols-2 gap-3 text-left pt-1">
+              <div>
+                <span className="text-[8.5px] font-black text-indigo-400 font-mono block leading-none">DARGONHEART</span>
+                <span className="text-[7.5px] font-mono text-zinc-500 block hover:text-indigo-300 transition-colors mt-0.5 select-all">visiolucis2025@gmail.com</span>
+                <span className="text-[8px] text-zinc-400 font-sans block mt-1">Lead Concept, FX Architecture & Deck UX Director</span>
+              </div>
+              <div className="border-l border-white/5 pl-3">
+                <span className="text-[8.5px] font-black text-emerald-400 font-mono block leading-none">GEMINI</span>
+                <span className="text-[7.5px] font-mono text-zinc-500 block mt-0.5">Google AI Studio Build</span>
+                <span className="text-[8px] text-zinc-400 font-sans block mt-1">AI Software Engineer, Waveform & Web Audio DSP</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
