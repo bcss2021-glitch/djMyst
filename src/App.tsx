@@ -613,10 +613,10 @@ export default function App() {
           
           <div className="h-6 w-full bg-black/40 rounded overflow-hidden border border-white/5 relative">
             <div className="absolute inset-x-0 bottom-0 top-0 opacity-40">
-                <Visualizer deck="A" color="#3b82f6" isPlaying={playingState.A} mode="spectrum" />
+                <Visualizer deck="A" color="#3b82f6" isPlaying={playingState.A} mode="spectrum" sourceType={deckSources.A} />
             </div>
             <div className="absolute inset-x-0 bottom-0 top-0 opacity-40">
-                <Visualizer deck="B" color="#a855f7" isPlaying={playingState.B} mode="spectrum" />
+                <Visualizer deck="B" color="#a855f7" isPlaying={playingState.B} mode="spectrum" sourceType={deckSources.B} />
             </div>
             <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-[6px] font-black tracking-widest text-white/10 uppercase">Master Spectral Link</div>
@@ -672,7 +672,7 @@ export default function App() {
           <div key={deck} className="relative h-full bg-[#0D0D12] overflow-hidden rounded border border-white/5 group">
             {/* Background FFT */}
             <div className="absolute inset-0 z-0">
-               <Visualizer deck={deck} color={deck === 'A' ? "#3b82f6" : "#a855f7"} isPlaying={playingState[deck]} />
+               <Visualizer deck={deck} color={deck === 'A' ? "#3b82f6" : "#a855f7"} isPlaying={playingState[deck]} sourceType={deckSources[deck]} />
             </div>
             
             <div className="absolute inset-0 flex items-center z-10 pointer-events-none">

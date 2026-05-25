@@ -6,9 +6,10 @@ interface VisualizerProps {
   color: string;
   isPlaying: boolean;
   mode?: 'bars' | 'spectrum';
+  sourceType?: 'AUDIO' | 'EXTERNAL';
 }
 
-export default function Visualizer({ deck, color, isPlaying, mode = 'bars' }: VisualizerProps) {
+export default function Visualizer({ deck, color, isPlaying, mode = 'bars', sourceType = 'AUDIO' }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -20,9 +21,24 @@ export default function Visualizer({ deck, color, isPlaying, mode = 'bars' }: Vi
     let animationId: number;
 
     const draw = () => {
-      const data = audioEngine.getFrequencyData(deck) as Float32Array;
+      let data = audioEngine.getFrequencyData(deck) as Float32Array;
       const width = canvas.width;
       const height = canvas.height;
+
+      // If playing an external track (like YouTube), synthesize high-fidelity visual frequency feedback
+      if (sourceType === 'EXTERNAL' && isPlaying) {
+        const time = Date.now() * 0.005;
+        const simulated = new Float32Array(64);
+        for (let i = 0; i < 64; i++) {
+          const bassFreq = Math.sin(time * 1.5 + i * 0.05) * 15;
+          const midFreq = Math.cos(time * 3.0 - i * 0.2) * 10;
+          const noise = (Math.random() - 0.5) * 5;
+          const taper = Math.exp(-i / 20); // taper off higher frequencies
+          
+          simulated[i] = -85 + Math.abs(bassFreq + midFreq + noise + 25) * taper;
+        }
+        data = simulated;
+      }
 
       ctx.clearRect(0, 0, width, height);
 

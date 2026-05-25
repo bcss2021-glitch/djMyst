@@ -30,6 +30,7 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
   }, [value, min, max, rotation]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsDragging(true);
     const startY = e.clientY;
     const startVal = value;
@@ -53,6 +54,33 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsDragging(true);
+    const startY = e.touches[0].clientY;
+    const startVal = value;
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault();
+      }
+      const deltaY = startY - moveEvent.touches[0].clientY;
+      const range = max - min;
+      const sensitivity = 1.0;
+      let newVal = startVal + (deltaY / 200) * range * sensitivity;
+      newVal = Math.max(min, Math.min(max, newVal));
+      onChange(newVal);
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+  };
+
   const currentRotation = useTransform(rotation, (r) => `${r}deg`);
 
   return (
@@ -60,6 +88,7 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
       <div 
         className={`${sizeClasses.track} relative rounded-full bg-black/40 border border-white/5 shadow-inner flex items-center justify-center cursor-ns-resize`}
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
       >
         {/* Scale marks */}
         <div className="absolute inset-0 pointer-events-none opacity-10">
