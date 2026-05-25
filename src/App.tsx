@@ -1429,7 +1429,7 @@ export default function App() {
             <div 
               onClick={() => setActiveLibraryTab('MANUAL')}
               className={`text-[11px] px-3 py-2 rounded cursor-pointer transition-all flex items-center gap-2 ${activeLibraryTab === 'MANUAL' ? 'text-indigo-400 bg-indigo-500/10 font-bold border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.15)]' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}>
-                <BookOpen size={12} /> OP MANUAL / REFERENCE
+                <BookOpen size={12} /> Manual/Ref
             </div>
 
             <div className="h-[1px] bg-white/5 my-2" />
@@ -1481,7 +1481,7 @@ export default function App() {
           </label>
         </div>
 
-        <div className="overflow-hidden flex flex-col gap-3">
+        <div className="overflow-hidden flex flex-col gap-3 h-full min-h-0">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className="text-[10px] uppercase font-black tracking-widest text-white/30 truncate">
@@ -1730,7 +1730,9 @@ export default function App() {
             )}
 
             {activeLibraryTab === 'MANUAL' && (
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <OpManualReader />
+              </div>
             )}
 
             {(activeLibraryTab === 'YOUTUBE' || activeLibraryTab === 'SPOTIFY') && (

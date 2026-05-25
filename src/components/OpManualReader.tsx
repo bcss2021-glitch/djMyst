@@ -159,7 +159,7 @@ export default function OpManualReader() {
       </div>
 
       {/* Manual content reader */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pb-12 space-y-3">
         {filteredSections.length > 0 ? (
           filteredSections.map((section) => {
             const isExpanded = expandedSection === section.id;
