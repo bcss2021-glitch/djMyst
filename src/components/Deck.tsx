@@ -306,14 +306,19 @@ export default function Deck({
           </div>
           
           <h3 className="text-xs font-black uppercase tracking-widest text-white mb-2 font-mono">External Stream Active</h3>
-          <div className="lcd-display text-[9px] mb-4 max-w-[200px] truncate">{externalUrl}</div>
+          <div className="lcd-display text-[9px] mb-2 max-w-[200px] truncate">{externalUrl}</div>
+
+          <div className="text-[10px] text-zinc-400 mb-4 font-mono flex items-center justify-center gap-2">
+            <span>VOLUME: <strong className={resolvedVolume > 0 ? "text-blue-400" : "text-white/40"}>{(resolvedVolume * 100).toFixed(0)}%</strong></span>
+            <span>•</span>
+            <span>STATE: <strong className={isPlaying ? "text-emerald-400" : "text-amber-500"}>{isPlaying ? "PLAYING" : "PAUSED"}</strong></span>
+          </div>
 
           <div className="w-full aspect-video bg-black rounded overflow-hidden border border-white/5 relative mb-6">
             <Player 
               url={externalUrl} 
               playing={isPlaying}
               volume={resolvedVolume}
-              muted={resolvedVolume === 0}
               controls={true}
               playsinline={true}
               width="100%"
@@ -325,8 +330,8 @@ export default function Deck({
                     autoplay: 0,
                     playsinline: 1,
                     controls: 1,
-                    mute: 0,
-                    enablejsapi: 1
+                    enablejsapi: 1,
+                    origin: window.location.origin
                   }
                 }
               }}
