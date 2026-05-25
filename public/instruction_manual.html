@@ -206,13 +206,19 @@
             <div class="md:col-span-4 bg-[#111116] p-4 rounded border border-white/5 flex flex-col justify-between min-h-[140px]">
               <div>
                 <div class="text-[9px] font-black tracking-widest uppercase text-brand-cyan mb-2">Transport Area</div>
-                <p class="text-[10px] text-zinc-400">Responsible for playback triggers, directions, and instant beat resets.</p>
+                <p class="text-[10px] text-zinc-400">Controls playback triggers, directions, and instant beat-seeking speeds.</p>
               </div>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="px-2 py-1 bg-zinc-800 text-[9px] font-black border border-zinc-700 text-zinc-200 rounded">REWIND</span>
-                <span class="px-2 py-1 bg-zinc-800 text-[9px] font-black border border-zinc-700 text-brand-orange rounded">CUE</span>
-                <span class="px-2.5 py-1 bg-teal-500/20 text-[9px] font-black border border-teal-500/30 text-emerald-400 rounded">PLAY / PAUSE</span>
-                <span class="px-2 py-1 bg-zinc-800 text-[9px] font-black border border-zinc-700 text-zinc-300 rounded">REV</span>
+              <div class="space-y-1.5 mt-2">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 bg-zinc-800 text-[8px] font-black border border-zinc-700 text-zinc-300 rounded">REW START</span>
+                  <span class="px-1.5 py-0.5 bg-teal-500/20 text-[8px] font-black border border-teal-500/30 text-emerald-400 rounded">PLAY / PAUSE</span>
+                  <span class="px-1.5 py-0.5 bg-zinc-800 text-[8px] font-black border border-zinc-700 text-zinc-300 rounded">REV DIRECTION</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 bg-zinc-800 text-[8px] font-black border border-zinc-700 text-zinc-400 rounded">&lt;&lt; FEW SECS</span>
+                  <span class="px-1.5 py-0.5 bg-zinc-800 text-[8px] font-black border border-zinc-700 text-brand-orange rounded">CUE POINT</span>
+                  <span class="px-1.5 py-0.5 bg-zinc-800 text-[8px] font-black border border-zinc-700 text-zinc-400 rounded">FEW SECS &gt;&gt;</span>
+                </div>
               </div>
             </div>
             
@@ -258,6 +264,11 @@
                 <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2"></span>PLAY / PAUSE</td>
                 <td class="p-3 text-brand-cyan">Single Click / Touch</td>
                 <td class="p-3 text-zinc-400">Triggers playback engine at set BPM. Click again to pause audio immediately. Pausing stops the rotating vinyl visual in the center platter.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-blue-400 inline-block mr-2"></span>FAST FORWARD / REWIND</td>
+                <td class="p-3 text-brand-cyan">Single Click</td>
+                <td class="p-3 text-zinc-400">Circular buttons with forward (<code>&gt;&gt;</code>) and rewind (<code>&lt;&lt;</code>) icons beside the CUE trigger. Instantly jumps the track timeline 10 seconds forward or backward, perfect for clean navigation and searching beats.</td>
               </tr>
               <tr class="hover:bg-white/[0.01]">
                 <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-brand-orange inline-block mr-2"></span>CUE</td>

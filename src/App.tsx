@@ -1030,9 +1030,13 @@ export default function App() {
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5">
             <div 
-              onClick={() => setActiveLibraryTab('CRATES')}
-              className={`text-[11px] px-3 py-2 rounded cursor-pointer transition-all flex items-center gap-2 ${activeLibraryTab === 'CRATES' ? 'text-blue-400 bg-blue-500/10 font-bold border border-blue-500/20' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}>
-                <Disc3 size={12} /> CRATES
+              onClick={() => {
+                setActiveLibraryTab('CRATES');
+                setSearchQuery('');
+                setAudiusTracks([]);
+              }}
+              className={`text-[11px] px-3 py-2 rounded cursor-pointer transition-all flex items-center gap-2 ${activeLibraryTab === 'CRATES' && !searchQuery ? 'text-blue-400 bg-blue-500/10 font-bold border border-blue-500/20' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}>
+                <Disc3 size={12} /> CRATES / SYSTEM
             </div>
             <div 
               onClick={() => setActiveLibraryTab('PLAYLIST')}
@@ -1066,15 +1070,22 @@ export default function App() {
             
             <div className="h-[1px] bg-white/5 my-2" />
             
-            {['Audius Hits', 'House Classics', 'Deep Techno'].map((crate) => {
-                const isActive = searchQuery === crate && activeLibraryTab === 'CRATES';
+            {['System Samples', 'Audius Hits', 'House Classics', 'Deep Techno'].map((crate) => {
+                const isActive = crate === 'System Samples' 
+                  ? (searchQuery === '' && activeLibraryTab === 'CRATES')
+                  : (searchQuery === crate && activeLibraryTab === 'CRATES');
                 return (
                   <div 
                     key={crate} 
                     onClick={() => {
                       setActiveLibraryTab('CRATES');
-                      setSearchQuery(crate);
-                      handleSearch(crate);
+                      if (crate === 'System Samples') {
+                        setSearchQuery('');
+                        setAudiusTracks([]);
+                      } else {
+                        setSearchQuery(crate);
+                        handleSearch(crate);
+                      }
                     }}
                     className={`text-[10px] px-3 py-1.5 rounded cursor-pointer transition-all uppercase tracking-tighter flex items-center justify-between group ${isActive ? 'text-blue-400 bg-blue-500/10 font-bold border-r-2 border-blue-500' : 'text-white/20 hover:text-white/40 hover:bg-white/5'}`}>
                       <span>- {crate}</span>
