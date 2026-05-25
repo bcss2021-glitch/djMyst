@@ -527,9 +527,9 @@ export default function App() {
     setFilterState({ A: 0, B: 0 });
 
     // 3. Reset Volumes
-    audioEngine.setVolume('A', 0.8);
-    audioEngine.setVolume('B', 0.8);
-    setVolumeState({ A: 0.8, B: 0.8 });
+    audioEngine.setVolume('A', 0.33);
+    audioEngine.setVolume('B', 0.33);
+    setVolumeState({ A: 0.33, B: 0.33 });
 
     // 4. Reset Pre-fade Gain state to 1.0
     audioEngine.setGain('A', 1.0);
