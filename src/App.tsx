@@ -5,12 +5,13 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Tone from 'tone';
-import { Music, Upload, Info, Settings, Search, Disc3, Headphones, ChevronUp, ChevronDown, Maximize2, LayoutGrid, List, Activity, Heart, ListPlus, Trash2, Star, Save, Clock, Download, Plus, FileText } from 'lucide-react';
+import { Music, Upload, Info, Settings, Search, Disc3, Headphones, ChevronUp, ChevronDown, Maximize2, LayoutGrid, List, Activity, Heart, ListPlus, Trash2, Star, Save, Clock, Download, Plus, FileText, BookOpen, ExternalLink, HelpCircle } from 'lucide-react';
 import { audioEngine } from './lib/audioEngine';
 import Deck from './components/Deck';
 import Mixer from './components/Mixer';
 import Waveform from './components/Waveform';
 import Visualizer from './components/Visualizer';
+import OpManualReader from './components/OpManualReader';
 import { AudiusTrack, searchAudius, getAudiusStreamUrl } from './services/audius';
 
 interface TrackConfig {
@@ -88,7 +89,7 @@ export default function App() {
     }
   });
   
-  const [activeLibraryTab, setActiveLibraryTab] = useState<'CRATES' | 'PLAYLIST' | 'FAVORITES' | 'HISTORY' | 'YOUTUBE' | 'SPOTIFY'>('FAVORITES');
+  const [activeLibraryTab, setActiveLibraryTab] = useState<'CRATES' | 'PLAYLIST' | 'FAVORITES' | 'HISTORY' | 'YOUTUBE' | 'SPOTIFY' | 'MANUAL'>('FAVORITES');
   const [deckSources, setDeckSources] = useState<{ A: 'AUDIO' | 'EXTERNAL', B: 'AUDIO' | 'EXTERNAL' }>({ A: 'AUDIO', B: 'AUDIO' });
   const [externalUrls, setExternalUrls] = useState<{ A: string | null, B: string | null }>({ A: null, B: null });
 
@@ -1425,6 +1426,11 @@ export default function App() {
               className={`text-[11px] px-3 py-2 rounded cursor-pointer transition-all flex items-center gap-2 ${activeLibraryTab === 'HISTORY' ? 'text-orange-400 bg-orange-500/10 font-bold border border-orange-500/20' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}>
                 <Clock size={12} /> HISTORY ({history.length})
             </div>
+            <div 
+              onClick={() => setActiveLibraryTab('MANUAL')}
+              className={`text-[11px] px-3 py-2 rounded cursor-pointer transition-all flex items-center gap-2 ${activeLibraryTab === 'MANUAL' ? 'text-indigo-400 bg-indigo-500/10 font-bold border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.15)]' : 'text-white/40 hover:text-white/60 hover:bg-white/5'}`}>
+                <BookOpen size={12} /> OP MANUAL / REFERENCE
+            </div>
 
             <div className="h-[1px] bg-white/5 my-2" />
 
@@ -1721,6 +1727,10 @@ export default function App() {
                           )}
                     </tbody>
                 </table>
+            )}
+
+            {activeLibraryTab === 'MANUAL' && (
+                <OpManualReader />
             )}
 
             {(activeLibraryTab === 'YOUTUBE' || activeLibraryTab === 'SPOTIFY') && (
