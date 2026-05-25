@@ -280,6 +280,8 @@ interface DeckProps {
   onScratchDrag?: (sec: number) => void;
   onScratchStart?: () => void;
   onScratchEnd?: () => void;
+  onPlayerReady?: () => void;
+  onPlayerBuffer?: () => void;
 }
 
 export default function Deck({ 
@@ -289,7 +291,7 @@ export default function Deck({
   keyLock, onKeyLockToggle, gain = 1, onGainChange, hotCues = [], onHotCue, onClearCues,
   loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1,
   onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
-  onScratchDrag, onScratchStart, onScratchEnd
+  onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
@@ -324,6 +326,10 @@ export default function Deck({
               width="100%"
               height="100%"
               style={{ position: 'absolute', top: 0, left: 0 }}
+              onReady={onPlayerReady}
+              onBuffer={onPlayerBuffer}
+              onBufferEnd={onPlayerReady}
+              onError={onPlayerReady}
               config={{
                 youtube: {
                   playerVars: {
@@ -339,13 +345,21 @@ export default function Deck({
           </div>
 
           <div className="w-full flex justify-center mb-4">
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 max-w-sm text-center">
-              <div className="flex items-center justify-center gap-1.5 text-amber-400 text-[9px] font-black uppercase mb-1">
-                <AlertTriangle size={12} className="animate-pulse" /> Browser Audio Safe-Guard
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 max-w-sm text-center flex flex-col gap-2 items-center">
+              <div className="flex items-center justify-center gap-1.5 text-amber-500 text-[9px] font-black uppercase tracking-wider">
+                <AlertTriangle size={12} className="animate-pulse" /> Iframe Sandbox Restrictions
               </div>
-              <p className="text-[10px] text-zinc-300 leading-normal">
-                Modern browsers block audio on loaded links until you <strong className="text-amber-400">click/tap directly inside the YouTube iframe once</strong>. Tap the player frame directly to hear sound!
+              <p className="text-[10px] text-zinc-300 leading-normal max-w-xs">
+                Browsers block audio contexts and intercept clicks inside third-party embeds (like YouTube) when they are nested inside preview windows.
               </p>
+              <a 
+                href={window.location.href} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="mt-1 px-3 py-1.5 bg-amber-500 border border-amber-600 hover:bg-amber-400 text-black rounded text-[9px] font-black uppercase tracking-widest transition-all shadow-[0_4px_12px_rgba(245,158,11,0.2)] flex items-center gap-1"
+              >
+                <ExternalLink size={10} /> Open App in top-level New Tab
+              </a>
             </div>
           </div>
 

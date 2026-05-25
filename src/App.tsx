@@ -62,8 +62,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [audiusTracks, setAudiusTracks] = useState<AudiusTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const loadingState = useState({ A: false, B: false })[0];
-  const setLoadingState = useState({ A: false, B: false })[1];
+  const [loadingState, setLoadingState] = useState({ A: false, B: false });
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeLoadingUrlRef = useRef<{ A: string | null, B: string | null }>({ A: null, B: null });
   const wasPlayingBeforeScratch = useRef<Record<'A' | 'B', boolean>>({ A: false, B: false });
@@ -183,6 +182,8 @@ export default function App() {
       // Stop the audio engine player if it was playing
       audioEngine.stop(deck);
       setPlayingState(prev => ({ ...prev, [deck]: false }));
+      // Set loading state to true for Youtube/Spotify so play button is greyed out/shows loading indicator!
+      setLoadingState(prev => ({ ...prev, [deck]: true }));
       return;
     }
 
@@ -1255,6 +1256,8 @@ export default function App() {
                   trackUrl={trackInfo.A.url} 
                   isPlaying={playingState.A} 
                   isLoading={loadingState.A}
+                  onPlayerReady={() => setLoadingState(prev => ({ ...prev, A: false }))}
+                  onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, A: true }))}
                   onPlayPause={() => togglePlay('A')}
                   onSync={() => handleSync('A')}
                   playbackRate={playbackRates.A}
@@ -1320,6 +1323,8 @@ export default function App() {
                 trackUrl={trackInfo.B.url} 
                 isPlaying={playingState.B} 
                 isLoading={loadingState.B}
+                onPlayerReady={() => setLoadingState(prev => ({ ...prev, B: false }))}
+                onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, B: true }))}
                 onPlayPause={() => togglePlay('B')}
                 onSync={() => handleSync('B')}
                 playbackRate={playbackRates.B}
