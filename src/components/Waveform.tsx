@@ -17,6 +17,9 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const [localDuration, setLocalDuration] = useState(0);
+
+  const finalDuration = duration || localDuration || 180;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -42,8 +45,19 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
 
     wavesurferRef.current.on('interaction', (newProgress) => {
       if (onSeek) {
-        const dur = wavesurferRef.current?.getDuration() || duration || 0;
+        const dur = wavesurferRef.current?.getDuration() || finalDuration || 0;
         onSeek(newProgress * dur);
+      }
+    });
+
+    wavesurferRef.current.on('ready', () => {
+      try {
+        const dur = wavesurferRef.current?.getDuration() || 0;
+        if (dur > 0) {
+          setLocalDuration(dur);
+        }
+      } catch (e) {
+        console.error("Failed to get duration from wavesurfer:", e);
       }
     });
 
@@ -138,10 +152,10 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
       />
       
       {/* Active CUE point visualization */}
-      {duration && duration > 0 && cuePoint !== undefined && cuePoint !== null && (
+      {finalDuration && finalDuration > 0 && cuePoint !== undefined && cuePoint !== null && (
         <div 
           className="absolute top-0 bottom-0 w-[2px] bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.9)] z-30 pointer-events-none"
-          style={{ left: `${(cuePoint / duration) * 100}%` }}
+          style={{ left: `${(cuePoint / finalDuration) * 100}%` }}
         >
           <div className="absolute top-0.5 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-[6px] font-black px-1 py-0.2 rounded-sm select-none shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
             CUE
@@ -150,13 +164,13 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
       )}
 
       {/* Active Hot Cues visualization */}
-      {duration && duration > 0 && hotCues && hotCues.map((hc, idx) => {
+      {finalDuration && finalDuration > 0 && hotCues && hotCues.map((hc, idx) => {
         if (hc === undefined || hc === null) return null;
         return (
           <div 
             key={idx}
             className="absolute top-0 bottom-0 w-[1.5px] bg-red-400 shadow-[0_0_6px_rgba(239,68,68,0.8)] z-30 pointer-events-none"
-            style={{ left: `${(hc / duration) * 100}%` }}
+            style={{ left: `${(hc / finalDuration) * 100}%` }}
           >
             <div className="absolute bottom-1 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[6px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-sm select-none shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
               HC{idx + 1}

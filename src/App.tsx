@@ -40,6 +40,7 @@ export default function App() {
   const [isStarted, setIsStarted] = useState(false);
   const [playingState, setPlayingState] = useState({ A: false, B: false });
   const [cuePoints, setCuePoints] = useState<Record<'A' | 'B', number>>({ A: 0, B: 0 });
+  const cuePointsRef = useRef<Record<'A' | 'B', number>>({ A: 0, B: 0 });
   const [reverseStates, setReverseStates] = useState<Record<'A' | 'B', boolean>>({ A: false, B: false });
   const [isCueActive, setIsCueActive] = useState<Record<'A' | 'B', boolean>>({ A: false, B: false });
   const [browserHeight, setBrowserHeight] = useState(200);
@@ -48,9 +49,11 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [audiusTracks, setAudiusTracks] = useState<AudiusTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [loadingState, setLoadingState] = useState({ A: false, B: false });
+  const loadingState = useState({ A: false, B: false })[0];
+  const setLoadingState = useState({ A: false, B: false })[1];
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeLoadingUrlRef = useRef<{ A: string | null, B: string | null }>({ A: null, B: null });
+  const wasPlayingBeforeScratch = useRef<Record<'A' | 'B', boolean>>({ A: false, B: false });
   
   const [playlist, setPlaylist] = useState<SavedTrack[]>(() => {
     try {
@@ -504,13 +507,14 @@ export default function App() {
       if (isCurrentlyPlaying) {
         audioEngine.playPause(deck);
         setPlayingState(prev => ({ ...prev, [deck]: false }));
-        audioEngine.seek(deck, cuePoints[deck]);
+        audioEngine.seek(deck, cuePointsRef.current[deck]);
       } else {
         const currentPos = audioEngine.getPosition(deck);
-        let activeCue = cuePoints[deck];
+        let activeCue = cuePointsRef.current[deck];
         
         if (Math.abs(currentPos - activeCue) > 0.25) {
           activeCue = currentPos;
+          cuePointsRef.current[deck] = currentPos;
           setCuePoints(prev => ({ ...prev, [deck]: currentPos }));
         }
         
@@ -528,7 +532,7 @@ export default function App() {
     try {
       if (isCueActive[deck]) {
         audioEngine.playPause(deck);
-        audioEngine.seek(deck, cuePoints[deck]);
+        audioEngine.seek(deck, cuePointsRef.current[deck]);
         setIsCueActive(prev => ({ ...prev, [deck]: false }));
       }
     } catch (e) {
@@ -551,6 +555,27 @@ export default function App() {
       audioEngine.scratchSeek(deck, deltaSeconds);
     } catch (e) {
       console.error(`Scratch drag error on deck ${deck}:`, e);
+    }
+  };
+
+  const handleScratchStart = (deck: 'A' | 'B') => {
+    try {
+      wasPlayingBeforeScratch.current[deck] = playingState[deck];
+      if (playingState[deck]) {
+        audioEngine.stop(deck);
+      }
+    } catch (e) {
+      console.error(`Scratch start error on deck ${deck}:`, e);
+    }
+  };
+
+  const handleScratchEnd = (deck: 'A' | 'B') => {
+    try {
+      if (wasPlayingBeforeScratch.current[deck]) {
+        audioEngine.playPause(deck);
+      }
+    } catch (e) {
+      console.error(`Scratch end error on deck ${deck}:`, e);
     }
   };
 
@@ -904,6 +929,8 @@ export default function App() {
                   onReverseToggle={() => handleReverseToggle('A')}
                   isReversed={reverseStates.A}
                   onScratchDrag={(sec) => handleScratchDrag('A', sec)}
+                  onScratchStart={() => handleScratchStart('A')}
+                  onScratchEnd={() => handleScratchEnd('A')}
                 />
           </div>
 
@@ -967,6 +994,8 @@ export default function App() {
                 onReverseToggle={() => handleReverseToggle('B')}
                 isReversed={reverseStates.B}
                 onScratchDrag={(sec) => handleScratchDrag('B', sec)}
+                onScratchStart={() => handleScratchStart('B')}
+                onScratchEnd={() => handleScratchEnd('B')}
               />
           </div>
         </div>

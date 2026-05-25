@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRO-GRADE DUAL DECK DJ CONSOLE: OPERATOR'S MANUAL</title>
+  <!-- Google Fonts: Space Grotesk for Headings, JetBrains Mono for Hardware Telemetry, Inter for Body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            display: ['Space Grotesk', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              cyan: '#22d3ee',      // Deck A Accent
+              purple: '#a855f7',    // Deck B Accent
+              orange: '#f97316',    // Cue Point Alert
+              deep: '#0a0a0c',      // Chassis Base
+              panel: '#111116',     // Console Panel
+              border: '#1c1c20',    // Bezel Line
+              knob: '#2a2a35'       // Machined Grips
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* Premium hardware panel aesthetics */
+    .brushed-metal {
+      background: linear-gradient(135deg, #0d0d11 0%, #15151c 50%, #0d0d11 100%);
+      position: relative;
+    }
+    .brushed-metal::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255,255,255,0.015) 1px, rgba(255,255,255,0.015) 2px);
+      pointer-events: none;
+      border-radius: inherit;
+    }
+    .lcd-screen {
+      font-family: 'JetBrains Mono', monospace;
+      background: #030304;
+      border: 1px solid rgba(255,255,255,0.04);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+    }
+    .tactile-bezel {
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.05);
+    }
+    .knob-swatch {
+      background: radial-gradient(circle at 35% 35%, #3f3f4e 0%, #18181e 70%, #08080c 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
+    }
+    .glow-purple {
+      box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+    }
+    .glow-orange {
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.45);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.3);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.2);
+    }
+  </style>
+</head>
+<body class="bg-[#030304] text-zinc-300 font-sans leading-relaxed custom-scrollbar selection:bg-brand-cyan selection:text-black">
+
+  <!-- Header Section -->
+  <header class="border-b border-white/5 py-12 px-6 bg-gradient-to-b from-[#0e0e12] to-transparent relative overflow-hidden">
+    <div class="absolute inset-0 bg-grid-white/[0.01] pointer-events-none" style="background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <span class="bg-gradient-to-r from-brand-cyan to-brand-purple text-black text-[10px] uppercase tracking-[0.25em] px-2 py-0.5 rounded font-black font-mono shadow-md">OPERATOR MODULE</span>
+          <span class="text-zinc-500 text-[10px] uppercase tracking-widest font-mono">REV. 2.9 (PRO)</span>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-display font-bold text-white tracking-tight leading-none mb-3">
+          PROFESSIONAL DUAL-DECK <br class="hidden md:inline"/>
+          <span class="bg-gradient-to-r from-brand-cyan via-white to-brand-purple bg-clip-text text-transparent">DJ MIX STATION</span>
+        </h1>
+        <p class="text-xs md:text-sm text-zinc-400 font-mono max-w-xl">
+          Complete structural operators handbook. Learn the mechanical layout, system integration pathways, and professional mixing physics of your browser workstation.
+        </p>
+      </div>
+      
+      <!-- Telemetry Card -->
+      <div class="lcd-screen p-4 rounded-lg border border-white/5 min-w-[260px] flex flex-col justify-between">
+        <div class="flex justify-between items-center border-b border-white/5 pb-2 mb-2">
+          <span class="text-[8px] font-black uppercase text-brand-cyan tracking-wider font-mono">● SYSTEM CONNECTED</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-cyan animate-ping"></span>
+        </div>
+        <div class="space-y-1 font-mono text-[10px] text-zinc-400">
+          <div class="flex justify-between"><span>AUDIO CORE:</span><span class="text-white font-bold">WEB AUDIO API</span></div>
+          <div class="flex justify-between"><span>SAMPLE RATE:</span><span class="text-emerald-400">48,000 HZ / STEREO</span></div>
+          <div class="flex justify-between"><span>DECKS ACTIVE:</span><span class="text-zinc-200">A [CYAN] | B [PURPLE]</span></div>
+          <div class="flex justify-between"><span>LATENCY DEPTH:</span><span class="text-brand-cyan font-bold">&lt; 15 MS (OPTIMIZED)</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Grid Wrapper -->
+  <main class="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
+    
+    <!-- Left Navigation Bar (Sticks on Desktop) -->
+    <nav class="lg:col-span-3 lg:sticky lg:top-8 h-fit space-y-3 hidden lg:block">
+      <div class="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-4 font-mono px-3">Handbook Index</div>
+      <a href="#welcome" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">01 // Welcome Ceremony</a>
+      <a href="#decks" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">02 // The Decks (A & B)</a>
+      <a href="#platters" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">03 // JogWheels & Scratching</a>
+      <a href="#cues" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">04 // Cues & Hot Points</a>
+      <a href="#mixer" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">05 // Channel Mixer Console</a>
+      <a href="#fx" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">06 // FX Engine & Rolls</a>
+      <a href="#crate" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">07 // Sound Libraries</a>
+      <a href="#masterclass" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">08 // Step-By-Step Mix</a>
+      
+      <!-- Utility Warning Bezel -->
+      <div class="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg space-y-2 mt-8">
+        <div class="flex items-center gap-2 text-yellow-500 font-bold text-[10px] uppercase font-mono">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          TACTILE ALERT
+        </div>
+        <p class="text-[9px] text-zinc-400 font-medium">
+          Most controls are real knobs & sliders. Click & drag them upward or downward to pivot, twist, or slide. Never click once and assume!
+        </p>
+      </div>
+    </nav>
+    
+    <!-- Right Manual Document Section -->
+    <div class="lg:col-span-9 space-y-16">
+      
+      <!-- section 1: introduction -->
+      <section id="welcome" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold font-mono tracking-widest">SECTION 01</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE PHILOSOPHY OF SOUND MANIPULATION</h2>
+        </div>
+        <p class="text-zinc-400 text-sm leading-relaxed">
+          Welcome to your professional audio station. This application is designed to mimic a high-end physical hardware DJ controller setup (such as Pioneer DJ Nexus systems or Native Instruments Kontrol).
+        </p>
+        <p class="text-zinc-400 text-sm leading-relaxed">
+          As a DJ (Disc Jockey), your primary objective is <strong class="text-white">seamless continuity</strong>: blending two tracks back-to-back so flawlessly that the audience feels as though they are experiencing a single, endless, evolving musical journey. To do this, you must control three core pillars of audio: <strong class="text-cyan-400">Tempo (speed in beats-per-minute)</strong>, <strong class="text-purple-400">Timbre (frequency EQ and filters)</strong>, and <strong class="text-brand-orange">Amplitude (volume mixing)</strong>. This manual maps every instrument at your fingertips to those pillars.
+        </p>
+        
+        <div class="bg-gradient-to-r from-teal-500/5 to-cyan-500/5 p-5 rounded-lg border border-teal-500/10 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="space-y-1">
+            <span class="text-brand-cyan font-mono text-[9px] font-black uppercase tracking-wider">01 // SELECT CLARITY</span>
+            <p class="text-[11px] text-zinc-400">Choose system music in the crate at the bottom, load on Deck A/B, and watch waveforms parse in real time.</p>
+          </div>
+          <div class="space-y-1">
+            <span class="text-brand-purple font-mono text-[9px] font-black uppercase tracking-wider">02 // MATCH VELOCITIES</span>
+            <p class="text-[11px] text-zinc-400">Use pitch/tempo faders or hit the SYNC button to align the beats of both channels instantly.</p>
+          </div>
+          <div class="space-y-1">
+            <span class="text-brand-orange font-mono text-[9px] font-black uppercase tracking-wider">03 // BLEND SUB-FREQUENCIES</span>
+            <p class="text-[11px] text-zinc-400">Cut clashing basslines using EQs while crossfading gently to complete the transitional magic.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- section 2: the decks -->
+      <section id="decks" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 02</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE CHANNEL DECKS (A & B)</h2>
+        </div>
+        <p class="text-zinc-400 text-sm">
+          The console split is symmetrical. <span class="text-brand-cyan font-bold font-mono">DECK A (left, highlighted in Cyan)</span> and <span class="text-brand-purple font-bold font-mono">DECK B (right, highlighted in Purple)</span> represent your isolated music players. Each player behaves like an ultra-smart, touch-sensitive vinyl turntable.
+        </p>
+        
+        <!-- Deck Interactive Diagram Mockup -->
+        <div class="border border-white/5 bg-[#0b0b0f] rounded-xl p-6 relative">
+          <div class="absolute top-3 right-3 flex items-center gap-1.5 font-mono text-[8px] text-zinc-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+            <span class="relative flex h-1 w-1"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-cyan opacity-75"></span><span class="relative inline-flex rounded-full h-1 w-1 bg-brand-cyan"></span></span>
+            CYAN = TRACK A // PURPLE = TRACK B
+          </div>
+          
+          <h4 class="text-white text-xs font-bold font-display uppercase tracking-widest mb-4 border-b border-white/5 pb-2">Deck Control Interface Block</h4>
+          
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 font-mono text-xs">
+            <!-- Transport Buttons block -->
+            <div class="md:col-span-4 bg-[#111116] p-4 rounded border border-white/5 flex flex-col justify-between min-h-[140px]">
+              <div>
+                <div class="text-[9px] font-black tracking-widest uppercase text-brand-cyan mb-2">Transport Area</div>
+                <p class="text-[10px] text-zinc-400">Responsible for playback triggers, directions, and instant beat resets.</p>
+              </div>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="px-2 py-1 bg-zinc-800 text-[9px] font-black border border-zinc-700 text-zinc-200 rounded">REWIND</span>
+                <span class="px-2 py-1 bg-zinc-800 text-[9px] font-black border border-zinc-700 text-brand-orange rounded">CUE</span>
+                <span class="px-2.5 py-1 bg-teal-500/20 text-[9px] font-black border border-teal-500/30 text-emerald-400 rounded">PLAY / PAUSE</span>
+                <span class="px-2 py-1 bg-zinc-800 text-[9px] font-black border border-zinc-700 text-zinc-300 rounded">REV</span>
+              </div>
+            </div>
+            
+            <!-- Pitch/Tempo Block -->
+            <div class="md:col-span-4 bg-[#111116] p-4 rounded border border-white/5 flex flex-col justify-between min-h-[140px]">
+              <div>
+                <div class="text-[9px] font-black tracking-widest uppercase text-brand-cyan mb-2">Velocity Engine</div>
+                <p class="text-[10px] text-zinc-400">Controls playhead frequency, aligns speeds, and locks key frequencies.</p>
+              </div>
+              <div class="flex flex-col gap-1.5 mt-2">
+                <div class="flex justify-between items-center text-[10px]"><span class="text-zinc-500">Key Lock (MT):</span> <span class="text-zinc-100">Preserves vocals</span></div>
+                <div class="flex justify-between items-center text-[10px]"><span class="text-zinc-500">Tempo Fader:</span> <span class="text-brand-cyan">±50% Range</span></div>
+                <div class="flex justify-between items-center text-[10px]"><span class="text-zinc-500">Sync Trigger:</span> <span class="text-green-400 font-bold">Auto-RPM Match</span></div>
+              </div>
+            </div>
+            
+            <!-- Gain Control Block -->
+            <div class="md:col-span-4 bg-[#111116] p-4 rounded border border-white/5 flex flex-col justify-between min-h-[140px]">
+              <div>
+                <div class="text-[9px] font-black tracking-widest uppercase text-brand-cyan mb-2">Output Trim</div>
+                <p class="text-[10px] text-zinc-400">Balances structural audio gain prior to entering the master mixing console.</p>
+              </div>
+              <div class="flex items-center justify-between text-[11px] mt-2">
+                <span class="text-zinc-500">GAIN KNOB</span>
+                <span class="text-zinc-300">0% to 200% Vol</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Button-by-Button Table -->
+        <div class="overflow-x-auto border border-white/5 rounded-xl bg-[#08080c]">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-white/10 bg-white/[0.02]">
+                <th class="p-3 font-semibold text-white/50 tracking-wider font-mono">Control Label</th>
+                <th class="p-3 font-semibold text-white/50 tracking-wider font-mono">Action Form</th>
+                <th class="p-3 font-semibold text-white/50 tracking-wider font-mono">Action Outcome & DJ Purpose</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 font-mono">
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-2"></span>PLAY / PAUSE</td>
+                <td class="p-3 text-brand-cyan">Single Click / Touch</td>
+                <td class="p-3 text-zinc-400">Triggers playback engine at set BPM. Click again to pause audio immediately. Pausing stops the rotating vinyl visual in the center platter.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-brand-orange inline-block mr-2"></span>CUE</td>
+                <td class="p-3 text-yellow-500">Press & Hold, or Tap</td>
+                <td class="p-3 text-zinc-400">If song is playing: taps return playhead directly to the orange CUE point and pause. If song is paused: holding CUE temporarily previews the track from the start. Letting go instantly snaps back to the mark. Always use this to check beats!</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-blue-500 inline-block mr-2"></span>REWIND</td>
+                <td class="p-3 text-zinc-300">Single Click</td>
+                <td class="p-3 text-zinc-400">Instantly returns playhead time to exactly 00:00 (absolute track start). Exceptional for restarting tracks during failures or starting fresh.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-zinc-500 inline-block mr-2"></span>REV (Reverse)</td>
+                <td class="p-3 text-zinc-300">Click to Toggle On/Off</td>
+                <td class="p-3 text-zinc-400">Inverts play direction. Let the track spin completely backwards. When active, it glows amber (Deck A) or pink (Deck B). Crucial for creating psychedelic beat builds before drops.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-zinc-600 inline-block mr-2"></span>MT (Master Tempo)</td>
+                <td class="p-3 text-zinc-300">Click to Toggle On/Off</td>
+                <td class="p-3 text-zinc-400">Toggles "Key Lock". When locked, you can change track speed without changing its musical key. Vocals will sound crystal clear even if played 20% faster, instead of sounding like chipmunks.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-green-500 inline-block mr-2"></span>SYNC</td>
+                <td class="p-3 text-brand-cyan">Single Click</td>
+                <td class="p-3 text-zinc-400">Instantly matches the play rate (BPM) of this deck's track to the BPM of the opposite deck. Perfect for eliminating mechanical manual pitch matching error.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-brand-cyan inline-block mr-2"></span>GAIN</td>
+                <td class="p-3 text-yellow-400">Click & Drag Up / Down</td>
+                <td class="p-3 text-zinc-400">Pre-fader preamp signal volume. Amplifies or attenuates individual songs up to 2.0x (200%). If your loaded local file is too quiet, twist this up to balance it with Track B.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-white inline-block mr-2"></span>TEMPO Slider</td>
+                <td class="p-3 text-zinc-300">Click & Drag Vertical</td>
+                <td class="p-3 text-zinc-400">Physical speed fader. Adjusts track speed permanently up to ±50%. Moving the slider DOWN speeds the song up (traditional Pioneer standard). Moving UP slows it down.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- section 3: platters and scratching -->
+      <section id="platters" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 03</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE JOOWHEELS & THE ART OF SCRATCHING</h2>
+        </div>
+        <p class="text-zinc-400 text-sm leading-relaxed">
+          The giant circular discs in the center of both decks are touch-sensitive <strong class="text-white">JogWheels / Platters</strong>. These are not merely spinning graphics; they possess fully simulated physical weight, surface drag, and multi-touch sensors.
+        </p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-zinc-950/40 p-5 rounded-lg border border-white/5 space-y-3">
+            <h4 class="text-brand-cyan font-display text-xs font-bold uppercase tracking-widest">PRO MOTION DECK SENSING</h4>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              When a track plays, the outer ring is styled like strobe-dots rotating in perfect synchronicity. You can see your live track's play-position indicated by the glowing color markers (Cyan or Purple). 
+            </p>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              The center display isolates track BPM calculations and shows your exact temporary pitch bend values as a active percentage.
+            </p>
+          </div>
+          
+          <div class="bg-zinc-950/40 p-5 rounded-lg border border-white/5 space-y-3">
+            <h4 class="text-brand-purple font-display text-xs font-bold uppercase tracking-widest font-mono">PHYSICAL OPERATOR GESTURES</h4>
+            <ul class="space-y-2 text-xs text-zinc-400 font-mono">
+              <li><strong class="text-white">Left-Click & Drag (Circular):</strong> Grabs the vinyl surface. Dragging back-and-forth simulates real vinyl scratching, injecting live mechanical vinyl sound waves and letting you scrub perfectly to a beat.</li>
+              <li><strong class="text-white">Vertical Scroll Drag:</strong> Triggers temporary deceleration or acceleration (Pitch Bend) up to ±8%. Release the grab to snap back to the exact grid tempo instantly.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Testing instruction -->
+        <div class="p-4 bg-brand-cyan/5 border border-brand-cyan/20 rounded-lg">
+          <div class="text-[10px] font-black uppercase text-brand-cyan tracking-wider font-mono mb-1">PRO-TRAINING LAB #1: SCRATCH TESTING</div>
+          <p class="text-xs text-zinc-400 font-medium">
+            Load an active track on <strong class="text-white">Deck A</strong>. Hit play to get it spinning. Click and hold the center of the outer platter and slide it in quick horizontal or clock-wise arcs. You will hear a realistic pitch-bent vector scratching sound, and track playhead will lock onto your cursor instantly. Let go, and the track will instantly resume playing normally from that spot.
+          </p>
+        </div>
+      </section>
+
+      <!-- section 4: cues & hot points -->
+      <section id="cues" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 04</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">CUES & THE "1-2-3-4" HOT POINTS</h2>
+        </div>
+        <p class="text-zinc-400 text-sm">
+          A fundamental difference between playheads and professional DJ interfaces is <strong class="text-white">CUE management</strong>. Instead of scrubbing an entire track to find a spot, clean DJs mark instant target points.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div class="space-y-4">
+            <h3 class="text-white text-xs uppercase tracking-widest font-mono font-bold">1. MASTER ORANGE CUE POINT</h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              When a song is paused, the location you are on becomes the default base point. This spot is marked in the central wave spectrum with an <span class="text-brand-orange font-bold font-mono">Orange Vertical line labeled "CUE"</span>. 
+            </p>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Tapping the big round <strong class="text-white">CUE</strong> button will instantly snap your playhead exactly to this orange marker and pause. This is your anchor – if your mix clashes, drop the cue to start again.
+            </p>
+          </div>
+          
+          <div class="space-y-4">
+            <h3 class="text-white text-xs uppercase tracking-widest font-mono font-bold">2. THE 1, 2, 3, 4 HOT CUE QUADRANT</h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Underneath each deck, on the right side of the control block, is a grid of 4 buttons numbered <strong>1, 2, 3, 4</strong>. These are your <strong class="text-white">Hot Cues</strong>:
+            </p>
+            <ul class="text-xs text-zinc-400 space-y-1.5 list-disc pl-4 font-mono">
+              <li>By default, these squares are dim and display <strong class="text-white/30">empty</strong> values.</li>
+              <li>While a song is playing, click any empty pad (e.g., <strong class="text-white/80">1</strong>). It will capture the exact microsecond and begin to <strong class="text-brand-cyan">glow in Deck A's color</strong>.</li>
+              <li>Now, at any point in the set (even if playing or paused), clicking that glowing pad will <strong class="text-white font-bold">instantly warp</strong> you to that exact spot without pausing!</li>
+              <li>To clear these, click the red "<span class="text-red-400">RESET</span>" button located above the pads.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Testing instruction -->
+        <div class="p-4 bg-brand-purple/5 border border-brand-purple/20 rounded-lg">
+          <div class="text-[10px] font-black uppercase text-brand-purple tracking-wider font-mono mb-1">PRO-TRAINING LAB #2: HOT CUE WARPING</div>
+          <p class="text-xs text-zinc-400 font-medium">
+            Play a track on <strong class="text-white">Deck A</strong>. Right before the bass drop, click pad <strong class="text-zinc-100">1</strong>. Note that the pad lights up cyan. Let the song play for another 30 seconds. Now click pad <strong class="text-zinc-100">1</strong>. Watch how playback instantly warps back to the bass drop seamlessly. Also notice the spectacular red marker labeled <span class="text-red-400">"HC1"</span> printed directly on the waveform spectrum!
+          </p>
+        </div>
+      </section>
+
+      <!-- section 5: the mixer -->
+      <section id="mixer" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 05</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE CENTRAL MIXER CONSOLE</h2>
+        </div>
+        <p class="text-zinc-400 text-sm leading-relaxed">
+          The center console acts as your structural blending matrix. The console accepts audio from Deck A and Deck B, shapes their resonant frequencies, and merges them to the master stereo speaker outputs.
+        </p>
+
+        <!-- Mechanical layout grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs text-zinc-400">
+          <div class="bg-[#0b0b0f] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <div>
+              <div class="text-brand-cyan font-bold uppercase text-[9px] mb-2">1. FREQUENCY ISOLATORS</div>
+              <p class="text-[11px] leading-relaxed">Three rotary dials per channel control precise frequency isolators:</p>
+              <ul class="text-[10px] space-y-1 mt-2 pl-2">
+                <li>• <strong class="text-white">HI:</strong> Adjusts highs (hiss, hats, air).</li>
+                <li>• <strong class="text-white">MID:</strong> Adjusts mids (voice, synths).</li>
+                <li>• <strong class="text-white">LOW:</strong> Boosts or cuts sub-bass kicks.</li>
+              </ul>
+            </div>
+            <p class="text-[9px] text-yellow-500/80 mt-4 border-t border-white/5 pt-2">
+              ⚠️ NEVER blend two sub-basses at 100%. Cut one bass to 0% to avoid muddy, distorted speaker clipping!
+            </p>
+          </div>
+          
+          <div class="bg-[#0b0b0f] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <div>
+              <div class="text-brand-cyan font-bold uppercase text-[9px] mb-2">2. BIPOLAR VOICE FILTERS</div>
+              <p class="text-[11px] leading-relaxed">The FILTER dial cuts high and low profiles at once:</p>
+              <ul class="text-[10px] space-y-1 mt-2 pl-2">
+                <li>• <strong class="text-white">LEFT (Negative):</strong> Low-pass filter (LPF). Cuts all highs; track sounds muffled (underwater effect).</li>
+                <li>• <strong class="text-white">RIGHT (Positive):</strong> High-pass filter (HPF). Cuts all sub-line bass; track sounds thin.</li>
+              </ul>
+            </div>
+            <p class="text-[9px] text-zinc-500 mt-4 border-t border-white/5 pt-2">
+              Double-tap or drag to the pure 0 (center) to disable filters entirely.
+            </p>
+          </div>
+
+          <div class="bg-[#0b0b0f] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <div>
+              <div class="text-brand-cyan font-bold uppercase text-[9px] mb-2">3. LINE FADERS & CURVES</div>
+              <p class="text-[11px] leading-relaxed">The linear vertical sliders control channel levels, feeding into the horizontal crossfader bottom matrix:</p>
+              <ul class="text-[10px] space-y-1 mt-2 pl-2">
+                <li>• <strong class="text-white">CURVE:</strong> Tightens crossfader fade.</li>
+                <li>• <strong class="text-white">CLEAN SOUND:</strong> Resets Web Audio buffers instantly during glitch/stutters.</li>
+                <li>• <strong class="text-white">RESET CONSOLE:</strong> Instant zero-points.</li>
+              </ul>
+            </div>
+            <p class="text-[9px] text-zinc-500 mt-4 border-t border-white/5 pt-2">
+              The central LED strip maps live amplitude volume level limits with green/yellow/red bulbs.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- section 6: FX engine -->
+      <section id="fx" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 06</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE SPECIALIZED FX ENGINE & BEAT ROLLS</h2>
+        </div>
+        <p class="text-zinc-400 text-sm">
+          Want to turn standard vocals into warehouse stadium spectacles? Tapping the small arrow button (Chevron) on the side of the Jogwheels rotates the controls to expose the <strong class="text-white">Specialized FX Engine Panel</strong>.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- FX Knobs -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-3 font-mono text-xs">
+            <h4 class="text-brand-cyan font-display font-bold uppercase text-[10px] tracking-widest">FOUR TACTILE FX ISOLATORS</h4>
+            <div class="space-y-3 mt-2">
+              <div>
+                <span class="text-zinc-100 font-bold">● ECHO:</span>
+                <p class="text-zinc-400 text-[11px]">Creates repeating delays that slowly break down. Great for fading out tracks on transition sections.</p>
+              </div>
+              <div>
+                <span class="text-zinc-100 font-bold">● FLANGER (FLAN):</span>
+                <p class="text-zinc-400 text-[11px]">Takes slightly duplicated phase voice tracks to simulate a sweeping wind, jet-engine, or robotic whoosh effect.</p>
+              </div>
+              <div>
+                <span class="text-zinc-100 font-bold">● BITCRUSHER (BIT):</span>
+                <p class="text-zinc-400 text-[11px]">Reduces sampling resolution rate artificially. Gritty 8-bit digital sound, spectacular for industrial synth segments.</p>
+              </div>
+              <div>
+                <span class="text-zinc-100 font-bold">● REVERB (VERB):</span>
+                <p class="text-zinc-400 text-[11px]">Creates spatial cavernous delay. Floods vocals into high-end wet stadium reverberations.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Beat rolls -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-4 font-mono text-xs flex flex-col justify-between">
+            <div>
+              <h4 class="text-brand-purple font-display font-bold uppercase text-[10px] tracking-widest">NON-SLIP BEAT ROLLS (STUTTER BLOCKS)</h4>
+              <p class="text-zinc-400 text-[11px] leading-relaxed mt-2">
+                Located above the rotary dials is a bar containing <strong>1/4, 1/8, and 1/16 Beat Rolls</strong>:
+              </p>
+              <ul class="space-y-1.5 text-zinc-400 text-[11px] mt-2 list-decimal pl-4">
+                <li>Press and <strong class="text-white">hold down</strong> any pad (e.g. 1/8) during playback.</li>
+                <li>The audio engine will capture that tiny length of track and loop it continuously (stutter effect).</li>
+                <li>Crucially, the timeline keeps running in the background! When you let go, playback snaps <strong class="text-brand-cyan">perfectly back onto the live grid</strong>.</li>
+              </ul>
+            </div>
+
+            <div class="p-3 bg-zinc-900/50 rounded border border-white/5 space-y-1 mt-4">
+              <span class="text-emerald-400 text-[10px] font-bold">💾 INTEGRATED SET REBOOT</span>
+              <p class="text-[10px] text-zinc-400 font-medium">Click <strong class="text-white">"SAVE FX PRESET TO TRACK"</strong> to save these custom FX knob positions. Next time you load this track, your custom dials recreate themselves automatically!</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- section 7: CRATE AND HISTORY -->
+      <section id="crate" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 07</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE LIBRARY CRATES & DIGITAL INTAKE</h2>
+        </div>
+        <p class="text-zinc-400 text-sm leading-relaxed">
+          At the bottom of your workstation lies your musical record case. You can leverage four dedicated intake streams to prep your set:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono text-zinc-400">
+          <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
+            <span class="text-white font-bold block mb-1">1. SYSTEM FAVS</span>
+            Contains royalty-free organic tracks from Pixabay. Ready to mix out-of-the-box.
+          </div>
+          <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
+            <span class="text-brand-cyan font-bold block mb-1">2. AUDIUS NETWORK</span>
+            Search and stream 1 million+ underground techno and house tracks instantly via cloud ingestion API.
+          </div>
+          <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
+            <span class="text-brand-purple font-bold block mb-1">3. YOUTUBE / STREAM</span>
+            Enter any stream URL and tap Load. This uses Web Player pipelines directly inside your canvas!
+          </div>
+          <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
+            <span class="text-brand-orange font-bold block mb-1">4. LOCAL FILE DROP</span>
+            Drag any raw `.mp3` or `.wav` from your laptop or PC straight onto the console.
+          </div>
+        </div>
+      </section>
+
+      <!-- section 8: masterclass guide -->
+      <section id="masterclass" class="space-y-6">
+        <div class="border-b border-white/5 pb-4">
+          <span class="text-brand-cyan font-mono text-xs font-bold tracking-widest">SECTION 08</span>
+          <h2 class="text-2xl font-display font-semibold text-white mt-1">THE DJ MASTERCLASS: PERFORMING YOUR FIRST MIX</h2>
+        </div>
+        <p class="text-zinc-400 text-sm">
+          Now that you've surveyed every dial, let us put your theory to the test. Follow these exact steps to transition from <strong class="text-brand-cyan">Track A</strong> to <strong class="text-brand-purple">Track B</strong> without clashing.
+        </p>
+
+        <!-- Staggered steps board -->
+        <div class="space-y-6 relative border-l-2 border-zinc-800 pl-6 ml-4">
+          
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-brand-cyan text-black font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center">1</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Configure Deck A live on air</span>
+            <p class="text-zinc-400 text-xs">
+              Load a track onto <strong class="text-brand-cyan">Deck A</strong>. Push <strong class="text-white">Channel A Volume (CH A)</strong> Slider up to 100%. Move the horizontal crossfader all the way to the far LEFT (Deck A). Tap Play on Deck A. Check that the spectrum is jumping and you can hear the track playing loud and clear.
+            </p>
+          </div>
+
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-brand-cyan/80 text-black font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center">2</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Prepare Deck B in Silent Isolation</span>
+            <p class="text-zinc-400 text-xs text-zinc-400">
+              Load your second track onto <strong class="text-brand-purple">Deck B</strong>. Pull <strong class="text-white">CH B Volume Slider</strong> down to exactly 0% (Silent). 
+            </p>
+          </div>
+
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-purple-400 text-black font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center">3</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Synchronize tempos</span>
+            <p class="text-zinc-400 text-xs">
+              Look at Deck B's BPM display. Tap the <strong class="text-brand-purple">SYNC</strong> button on Deck B. Its BPM display will change to match Deck A's speed. Now their beats are perfectly aligned in the software.
+            </p>
+          </div>
+
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-purple-500/80 text-black font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center">4</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Set your sub-EQ barriers</span>
+            <p class="text-zinc-400 text-xs">
+              On the mixer channel for B, twist the <strong class="text-white">LOW EQ</strong> dial and the <strong class="text-white font-mono">FILTER</strong> knobs counterclockwise to cut the volume of the heavy bass beats. DJs never layer two kicks!
+            </p>
+          </div>
+
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-brand-orange text-white font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center">5</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Trigger Deck B on the Beat</span>
+            <p class="text-zinc-400 text-xs">
+              Watch Deck A's bar progression. On the first beat of a new musical phrase (usually on drum snaps or vocal starts, every 16 or 32 counts), hit <strong class="text-white">PLAY</strong> on Deck B. Use the <strong class="text-brand-orange">CUE</strong> button or hot cue <strong class="text-zinc-200">1</strong> to quickly go back and retry if your hand is late!
+            </p>
+          </div>
+
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-white text-black font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold">6</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Perform the Frequency Swap</span>
+            <p class="text-zinc-400 text-xs">
+              Slowly push <strong class="text-white">CH B fader</strong> to 100%. The crowd can now hear Track B's high hi-hats and vocals, but no heavy clashing drum. Now, move the crossfader to the exact middle. 
+              At the perfect section change: <strong>Quickly turn Track A's LOW knob to minimum, while simultaneously restoring Track B's LOW knob to the center!</strong>
+              The energy has just completely shifted to Track B while preserving the groove.
+            </p>
+          </div>
+
+          <div class="relative space-y-1">
+            <div class="absolute -left-10 top-0.5 bg-brand-purple text-white font-black font-mono text-xs w-6 h-6 rounded-full flex items-center justify-center">7</div>
+            <span class="text-white text-xs font-black font-display uppercase tracking-widest block">Fade out Track A</span>
+            <p class="text-zinc-400 text-xs">
+              Gradually pull <strong class="text-white">CH A fader</strong> down to 0% volume, slide the crossfader all the way to the far RIGHT, and hit pause on Deck A. You have just successfully completed your first transition. Prep your next track on Deck A and keep the party rocking!
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer block -->
+  <footer class="border-t border-white/5 py-12 px-6 bg-[#0a0a0d] mt-24 text-center text-xs font-mono text-zinc-500">
+    <div class="max-w-6xl mx-auto space-y-3">
+      <p>PRO-GRADE DUAL DECK DJ CONSOLE // INSTRUCTION & CALIBRATION REFERENCE FILE</p>
+      <p>Created with precision and hardware integrity. Review and test every dial directly on the live dashboard.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

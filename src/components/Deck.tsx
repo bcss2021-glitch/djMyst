@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { Play, Pause, FastForward, Rewind, ChevronRight, ChevronLeft, Zap, Layers, Music4, Save, ExternalLink, AlertTriangle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactPlayer from 'react-player';
 const Player = ReactPlayer as any;
 import { audioEngine } from '../lib/audioEngine';
@@ -18,91 +18,225 @@ interface JogWheelProps {
     onPitchBend?: (bend: number) => void;
     onPadTrigger?: (sample: string) => void;
     onScratchDrag?: (sec: number) => void;
+    onScratchStart?: () => void;
+    onScratchEnd?: () => void;
 }
 
-function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, onPitchBend, onPadTrigger, onScratchDrag }: JogWheelProps & { onClick?: () => void }) {
+function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, onPitchBend, onPadTrigger, onScratchDrag, onScratchStart, onScratchEnd }: JogWheelProps & { onClick?: () => void }) {
   const [bend, setBend] = useState(1);
   const [isScratching, setIsScratching] = useState(false);
+  const [rotationAngle, setRotationAngle] = useState(0); 
+  const [isGrabbing, setIsGrabbing] = useState(false);
+  
+  const wheelRef = useRef<HTMLDivElement>(null);
+  const lastAngleRef = useRef<number | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
-  const handlePan = (_: any, info: any) => {
-    const deltaX = info.delta.x || 0;
-    const deltaY = info.delta.y || 0;
+  // Platter spinning animation frame
+  useEffect(() => {
+    if (isPlaying && !isGrabbing) {
+      let lastTime = performance.now();
+      const spin = (time: number) => {
+        const delta = time - lastTime;
+        lastTime = time;
+        // ~200 degrees of rotation per second at 1x play rate
+        const angleChange = 200 * playbackRate * (delta / 1000);
+        setRotationAngle(prev => (prev + angleChange) % 360);
+        animationFrameRef.current = requestAnimationFrame(spin);
+      };
+      animationFrameRef.current = requestAnimationFrame(spin);
+    }
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, isGrabbing, playbackRate]);
+
+  const handleStart = (clientX: number, clientY: number) => {
+    if (!wheelRef.current || isLoading) return;
+    setIsGrabbing(true);
     
-    // Rotate/Gesture scratch: convert pixels of travel to seconds delta on track playhead
-    const totalDelta = Math.abs(deltaX) + Math.abs(deltaY);
-    if (totalDelta > 1 && onScratchDrag) {
-      const secDelta = (deltaX - deltaY) * 0.005; 
-      onScratchDrag(secDelta);
+    if (onScratchStart) {
+      onScratchStart();
     }
 
-    // Standard pitch bend behavior
-    const deltaYOffset = info.offset.y;
-    const newBend = 1 - (deltaYOffset / 1250); 
-    const clampedBend = Math.max(0.92, Math.min(1.08, newBend));
-    setBend(clampedBend);
-    onPitchBend?.(clampedBend);
+    const rect = wheelRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+    lastAngleRef.current = angle;
+  };
 
-    // Trigger raw scratch sound if moving quickly
-    const velocity = Math.abs(info.velocity.y || 0) + Math.abs(info.velocity.x || 0);
-    if (velocity > 400 && !isScratching) {
-      audioEngine.scratchWheel(velocity);
-      setIsScratching(true);
-      setTimeout(() => setIsScratching(false), 120);
+  const handleMove = (clientX: number, clientY: number) => {
+    if (!isGrabbing || !wheelRef.current || lastAngleRef.current === null) return;
+    
+    const rect = wheelRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const currentAngle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI);
+    
+    let angleDiff = currentAngle - lastAngleRef.current;
+    
+    // Handle circle border crossing (-180 to 180 discontinuity)
+    if (angleDiff > 180) angleDiff -= 360;
+    if (angleDiff < -180) angleDiff += 360;
+    
+    if (Math.abs(angleDiff) > 0.1) {
+      setRotationAngle(prev => (prev + angleDiff + 360) % 360);
+      
+      // Calculate playhead seek delta: 360 deg = 2 seconds of song
+      const secDelta = angleDiff * 0.006;
+      if (onScratchDrag) {
+        onScratchDrag(secDelta);
+      }
+      
+      const velocity = Math.abs(angleDiff) * 35;
+      if (velocity > 350 && !isScratching) {
+        audioEngine.scratchWheel(velocity);
+        setIsScratching(true);
+        setTimeout(() => setIsScratching(false), 100);
+      }
+      
+      lastAngleRef.current = currentAngle;
     }
   };
 
-  const handlePanEnd = () => {
+  const handleEnd = () => {
+    if (!isGrabbing) return;
+    setIsGrabbing(false);
+    lastAngleRef.current = null;
+    
+    if (onScratchEnd) {
+      onScratchEnd();
+    }
+
     setBend(1);
     onPitchBend?.(1);
     setIsScratching(false);
   };
 
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Only left click
+    handleStart(e.clientX, e.clientY);
+    
+    const handleGlobalMouseMove = (moveEvent: MouseEvent) => {
+      handleMove(moveEvent.clientX, moveEvent.clientY);
+    };
+    
+    const handleGlobalMouseUp = () => {
+      handleEnd();
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
+    
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    handleStart(touch.clientX, touch.clientY);
+    
+    const handleGlobalTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length === 0) return;
+      const t = moveEvent.touches[0];
+      handleMove(t.clientX, t.clientY);
+    };
+    
+    const handleGlobalTouchEnd = () => {
+      handleEnd();
+      document.removeEventListener('touchmove', handleGlobalTouchMove);
+      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    };
+    
+    document.addEventListener('touchmove', handleGlobalTouchMove);
+    document.addEventListener('touchend', handleGlobalTouchEnd);
+  };
+
   return (
     <div 
-      className="relative w-44 h-44 rounded-full bg-[#111] border-6 border-[#222] shadow-[0_0_20px_rgba(0,0,0,0.8),inset_0_0_15px_rgba(59,130,246,0.05)] flex items-center justify-center overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
+      ref={wheelRef}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      className={`relative w-44 h-44 rounded-full bg-[#0a0a0c] border-6 border-[#1c1c20] shadow-[0_0_30px_rgba(0,0,0,0.95),inset_0_0_20px_rgba(0,0,0,0.9)] flex items-center justify-center overflow-hidden transition-all duration-150 select-none ${
+        isGrabbing 
+          ? 'cursor-grabbing border-zinc-700 ring-2 ring-brand-cyan/20 scale-[0.99]' 
+          : 'cursor-grab hover:border-zinc-800'
+      }`}
     >
-      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-30" />
+      {/* Vinyl record shiny grooves */}
+      <div 
+        className="absolute inset-0 rounded-full opacity-40 pointer-events-none" 
+        style={{ 
+          background: 'repeating-radial-gradient(circle, #010101, #010101 2px, #18181e 3px, #010101 4px)' 
+        }} 
+      />
       
-      <motion.div 
-        className="w-full h-full rounded-full flex items-center justify-center"
-        onPan={handlePan}
-        onPanEnd={handlePanEnd}
-        animate={{ rotate: isPlaying ? 360 : rotation }}
-        transition={isPlaying ? { duration: 2, repeat: Infinity, ease: "linear" } : { type: "spring", damping: 15 }}
+      {/* Ambient lighting shine highlights */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-white/[0.03] to-transparent pointer-events-none" />
+
+      {/* Rotating Platter Chassis */}
+      <div 
+        className="w-full h-full rounded-full flex items-center justify-center relative pointer-events-none"
+        style={{ transform: `rotate(${rotationAngle}deg)` }}
       >
-        {/* Visual feedback for bend */}
+        {/* Visual feedback for pitch bend */}
         {bend !== 1 && (
-          <div className={`absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none`}>
-              <div className={`w-full h-full rounded-full border-4 ${bend > 1 ? 'border-green-500 scale-105' : 'border-red-500 scale-95'} transition-transform duration-75`} />
+          <div className="absolute inset-0 flex items-center justify-center opacity-20">
+              <div className={`w-full h-full rounded-full border-4 ${bend > 1 ? 'border-green-500 scale-105' : 'border-red-500 scale-95'} transition-all`} />
           </div>
         )}
 
-        {/* Position marker */}
-        <div className="absolute top-0 w-1.5 h-6 bg-brand-cyan shadow-[0_0_10px_#3b82f6] rounded-b-full" />
+        {/* Traditional White Platter Marker (Strobe dots / stripe) */}
+        <div className={`absolute top-0 w-1.5 h-6 shadow-[0_0_8px_currentColor] rounded-b-full ${
+          id === 'A' ? 'bg-blue-400 text-blue-500' : 'bg-purple-400 text-purple-500'
+        }`} />
+        <div className="absolute bottom-0 w-1 h-3 bg-white/10 rounded-t-full" />
+        <div className="absolute left-0 w-3 h-1 bg-white/10 rounded-r-full" />
+        <div className="absolute right-0 w-3 h-1 bg-white/10 rounded-l-full" />
+      </div>
+
+      {/* Center Metal Cap Display */}
+      <div 
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+        className="absolute w-24 h-24 rounded-full bg-gradient-to-b from-[#18181b] to-[#0f0f11] border border-white/[0.08] flex flex-col items-center justify-center shadow-2xl z-10 cursor-pointer active:scale-95 transition-transform"
+      >
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/75 rounded-full z-20">
+             <div className={`w-8 h-8 border-2 border-t-transparent animate-spin rounded-full ${id === 'A' ? 'border-blue-500' : 'border-purple-500'}`} />
+          </div>
+        )}
         
-        {/* Center Display */}
-        <div 
-          onClick={onClick}
-          className="w-24 h-24 rounded-full bg-surface-panel border border-white/5 flex flex-col items-center justify-center shadow-2xl relative z-10"
-        >
-          {isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full z-20">
-               <div className={`w-8 h-8 border-2 border-t-transparent animate-spin rounded-full ${id === 'A' ? 'border-blue-500' : 'border-purple-500'}`} />
-            </div>
-          ) : null}
-          {isScratching && (
-            <div className="absolute inset-0 flex items-center justify-center bg-brand-cyan/10 rounded-full z-20 animate-pulse">
-               <span className="text-[10px] font-black text-brand-cyan drop-shadow-[0_0_5px_#3b82f6]">SCRATCH</span>
-            </div>
-          )}
-          <div className={`text-brand-cyan text-xl font-mono font-bold leading-none ${bend !== 1 ? 'text-white' : ''}`}>
-            {(128 * playbackRate * bend).toFixed(1)}
+        {isGrabbing && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#101014] rounded-full z-20">
+             <span className={`text-[9px] font-black uppercase tracking-widest animate-pulse ${
+               id === 'A' ? 'text-blue-400 drop-shadow-[0_0_4px_rgba(59,130,246,0.6)]' : 'text-purple-400 drop-shadow-[0_0_4px_rgba(168,85,247,0.6)]'
+             }`}>TOUCH</span>
           </div>
-          <div className="text-[7px] opacity-40 uppercase tracking-widest mt-1">
-            {bend === 1 ? 'BPM' : (bend > 1 ? 'BEND +' : 'BEND -')} / {((playbackRate * bend - 1) * 100).toFixed(1)}%
-          </div>
+        )}
+
+        <div className={`text-xl font-mono font-black tracking-tighter leading-none ${
+          isGrabbing 
+            ? 'text-zinc-500' 
+            : (id === 'A' ? 'text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.3)]' : 'text-purple-400 drop-shadow-[0_0_6px_rgba(168,85,247,0.3)]')
+        }`}>
+          {(128 * playbackRate * bend).toFixed(1)}
         </div>
-      </motion.div>
+        
+        <div className="text-[7px] text-zinc-500/80 uppercase font-bold tracking-widest mt-1">
+          {bend === 1 ? 'BPM' : (bend > 1 ? 'BEND +' : 'BEND -')}
+        </div>
+        
+        <div className="text-[6px] text-zinc-600 font-mono mt-0.5">
+          {((playbackRate * bend - 1) * 100).toFixed(1)}%
+        </div>
+      </div>
     </div>
   );
 }
@@ -144,6 +278,8 @@ interface DeckProps {
   onReverseToggle?: () => void;
   isReversed?: boolean;
   onScratchDrag?: (sec: number) => void;
+  onScratchStart?: () => void;
+  onScratchEnd?: () => void;
 }
 
 export default function Deck({ 
@@ -153,7 +289,7 @@ export default function Deck({
   keyLock, onKeyLockToggle, gain = 1, onGainChange, hotCues = [], onHotCue, onClearCues,
   loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1,
   onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
-  onScratchDrag
+  onScratchDrag, onScratchStart, onScratchEnd
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
@@ -229,6 +365,8 @@ export default function Deck({
                 onPitchBend={onPitchBend}
                 onPadTrigger={onPadTrigger}
                 onScratchDrag={onScratchDrag}
+                onScratchStart={onScratchStart}
+                onScratchEnd={onScratchEnd}
                 onClick={() => onPadTrigger('scratch')} 
             />
             
