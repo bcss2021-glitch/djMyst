@@ -25,6 +25,7 @@ export class AudioEngine {
   xfadeMuteGainA: Tone.Gain;
   xfadeMuteGainB: Tone.Gain;
   sampler: Tone.Players;
+  limiter: Tone.Limiter;
   crossfadeCurve: number = 0.5; // 0 = linear, 1 = hard cut
   keyLockA: boolean = false;
   keyLockB: boolean = false;
@@ -37,6 +38,7 @@ export class AudioEngine {
   constructor() {
     this.deckA = new Tone.Player();
     this.deckB = new Tone.Player();
+    this.limiter = new Tone.Limiter(-1.5); // Add high-grade professional Limiter to prevent clipping scratchiness
     
     this.analyserA = new Tone.Analyser("fft", 64);
     this.analyserB = new Tone.Analyser("fft", 64);
@@ -93,8 +95,33 @@ export class AudioEngine {
     this.deckA.chain(this.gainA, this.pitchShiftA, this.eqA, this.analyserA, this.bitcrusherA, this.reverbA, this.echoA, this.phaserA, this.filterA, this.xfadeMuteGainA, this.crossfader.a);
     this.deckB.chain(this.gainB, this.pitchShiftB, this.eqB, this.analyserB, this.bitcrusherB, this.reverbB, this.echoB, this.phaserB, this.filterB, this.xfadeMuteGainB, this.crossfader.b);
     
-    this.crossfader.toDestination();
+    this.crossfader.chain(this.limiter, Tone.Destination);
     this.crossfader.connect(this.recorder);
+  }
+
+  clearStatic() {
+    try {
+      if (Tone.context.state === 'suspended') {
+        Tone.context.resume();
+      }
+      
+      // Momentarily disable/clear delay/echo buffers to flush audio queues
+      const oldValA = this.echoA.feedback.value;
+      const oldValB = this.echoB.feedback.value;
+      this.echoA.feedback.value = 0;
+      this.echoB.feedback.value = 0;
+      
+      setTimeout(() => {
+        this.echoA.feedback.value = oldValA;
+        this.echoB.feedback.value = oldValB;
+      }, 80);
+
+      // Trigger automatic gain calibration
+      if (this.gainA.gain.value > 1.2) this.gainA.gain.value = 1.0;
+      if (this.gainB.gain.value > 1.2) this.gainB.gain.value = 1.0;
+    } catch (e) {
+      console.error("Failed to clear audio static:", e);
+    }
   }
 
   startRecording() {

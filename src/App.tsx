@@ -445,6 +445,45 @@ export default function App() {
     setXfaderCurve(val);
   };
 
+  const handleOptimizeAudio = () => {
+    audioEngine.clearStatic();
+  };
+
+  const handleResetMixer = () => {
+    // 1. Reset EQs on Audio Engine and State
+    audioEngine.setEQ('A', 'low', 0);
+    audioEngine.setEQ('A', 'mid', 0);
+    audioEngine.setEQ('A', 'high', 0);
+    audioEngine.setEQ('B', 'low', 0);
+    audioEngine.setEQ('B', 'mid', 0);
+    audioEngine.setEQ('B', 'high', 0);
+    setEqState({
+      A: { low: 0, mid: 0, high: 0 },
+      B: { low: 0, mid: 0, high: 0 },
+    });
+
+    // 2. Reset Filters
+    audioEngine.setFilter('A', 0);
+    audioEngine.setFilter('B', 0);
+    setFilterState({ A: 0, B: 0 });
+
+    // 3. Reset Volumes
+    audioEngine.setVolume('A', 0.8);
+    audioEngine.setVolume('B', 0.8);
+    setVolumeState({ A: 0.8, B: 0.8 });
+
+    // 4. Reset Pre-fade Gain state to 1.0
+    audioEngine.setGain('A', 1.0);
+    audioEngine.setGain('B', 1.0);
+    setGainState({ A: 1, B: 1 });
+
+    // 5. Reset Crossfader & Curve
+    audioEngine.setCrossfade(0.5);
+    audioEngine.setCrossfaderCurve(0.5);
+    setCrossfade(0.5);
+    setXfaderCurve(0.5);
+  };
+
   const handlePitchBend = (deck: 'A' | 'B', multiplier: number) => {
     audioEngine.setPitchBend(deck, multiplier);
   };
@@ -790,6 +829,8 @@ export default function App() {
               volumeA={volumeState.A}
               volumeB={volumeState.B}
               onVolumeChange={handleVolumeChange}
+              onOptimizeAudio={handleOptimizeAudio}
+              onResetMixer={handleResetMixer}
             />
           </div>
 

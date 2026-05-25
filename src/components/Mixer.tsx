@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { Sparkles, RotateCcw } from 'lucide-react';
 import Knob from './Knob';
 import Fader from './Fader';
 
@@ -15,6 +17,8 @@ interface MixerProps {
   volumeA: number;
   volumeB: number;
   onVolumeChange: (deck: 'A' | 'B', val: number) => void;
+  onOptimizeAudio?: () => void;
+  onResetMixer?: () => void;
 }
 
 export default function Mixer({ 
@@ -22,15 +26,64 @@ export default function Mixer({
   crossfade, onCrossfadeChange,
   volumeA, volumeB, onVolumeChange,
   filterA, filterB, onFilterChange,
-  xfaderCurve, onXfaderCurveChange
+  xfaderCurve, onXfaderCurveChange,
+  onOptimizeAudio, onResetMixer
  }: MixerProps) {
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleOptimizeClick = () => {
+    setIsOptimizing(true);
+    if (onOptimizeAudio) onOptimizeAudio();
+    setTimeout(() => {
+      setIsOptimizing(false);
+    }, 1200);
+  };
+
+  const handleResetClick = () => {
+    setIsResetting(true);
+    if (onResetMixer) onResetMixer();
+    setTimeout(() => {
+      setIsResetting(false);
+    }, 600);
+  };
+
   return (
     <div className="bg-[#111116] border-x border-white/5 flex flex-col items-center py-4 px-2 h-full overflow-y-auto no-scrollbar relative hardware-surface">
       <div className="scanline" />
       
-      <div className="flex flex-col items-center mb-6">
+      <div className="flex flex-col items-center mb-4">
         <div className="text-[10px] font-black tracking-[0.3em] text-white/20 uppercase mb-1">Central Console</div>
-        <div className="h-[1px] w-12 bg-white/10" />
+        <div className="h-[1px] w-12 bg-white/10 mb-3" />
+      </div>
+
+      {/* Tactile Diagnostic and Correction Utilities */}
+      <div className="flex gap-2 mb-6 w-full max-w-[200px] px-1">
+        <button
+          onClick={handleOptimizeClick}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-1.5 rounded text-[8px] font-black tracking-wider uppercase transition-all duration-300 border ${
+            isOptimizing 
+            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400 cursor-default shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+            : 'bg-white/5 border-white/10 hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 text-white/60 active:scale-95 cursor-pointer'
+          }`}
+          title="Clean and optimize Web Audio engine buffers to stop scratchy sound or latency issues"
+        >
+          <Sparkles className={`w-3 h-3 ${isOptimizing ? 'animate-spin text-emerald-400' : 'text-emerald-500/60'}`} />
+          {isOptimizing ? 'OPTIMIZING' : 'CLEAN SOUND'}
+        </button>
+        
+        <button
+          onClick={handleResetClick}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-1.5 rounded text-[8px] font-black tracking-wider uppercase transition-all duration-300 border ${
+            isResetting 
+            ? 'bg-blue-500/20 border-blue-500 text-blue-400 cursor-default shadow-[0_0_8px_rgba(59,130,246,0.3)]'
+            : 'bg-white/5 border-white/10 hover:bg-blue-500/10 hover:border-blue-500/30 hover:text-blue-400 text-white/60 active:scale-95 cursor-pointer'
+          }`}
+          title="Reset EQ bands, faders, filters, and crossfader to default centers"
+        >
+          <RotateCcw className={`w-3 h-3 ${isResetting ? 'animate-spin text-blue-400' : 'text-blue-500/60'}`} />
+          {isResetting ? 'RESETTING' : 'RESET CONSOLE'}
+        </button>
       </div>
       
       {/* Gain & EQs */}
