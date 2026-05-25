@@ -352,9 +352,22 @@ export default function Deck({
           <div className="flex items-center gap-4">
              <button 
                onClick={onPlayPause}
-               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isPlaying ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]'}`}
+               disabled={isLoading}
+               style={{ opacity: isLoading ? 0.35 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}
+               className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                 isLoading 
+                   ? 'bg-zinc-800 text-zinc-500' 
+                   : (isPlaying ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]' : 'bg-green-500 shadow-[0_0_15px_rgba(34,197,94,0.4)]')
+               }`}
+               title={isLoading ? "Track is buffering... please wait" : "Play / Pause"}
              >
-                {isPlaying ? <Pause size={20} fill="white" className="text-white" /> : <Play size={20} fill="white" className="text-white translate-x-0.5" />}
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent animate-spin rounded-full" />
+                ) : isPlaying ? (
+                  <Pause size={20} fill="white" className="text-white" />
+                ) : (
+                  <Play size={20} fill="white" className="text-white translate-x-0.5" />
+                )}
              </button>
           </div>
         </div>
@@ -562,8 +575,22 @@ export default function Deck({
                 </button>
                 
                 {/* Main Play/Pause */}
-                <button onClick={onPlayPause} className="play-button w-12 h-12 tactile-button">
-                    {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} className="translate-x-0.5" fill="currentColor" />}
+                <button 
+                  onClick={onPlayPause} 
+                  disabled={isLoading}
+                  style={{ opacity: isLoading ? 0.35 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}
+                  className={`play-button w-12 h-12 tactile-button ${isLoading ? 'bg-zinc-800 text-zinc-500' : ''}`}
+                  title={isLoading ? "Track is buffering... please wait" : "Play / Pause"}
+                >
+                    {isLoading ? (
+                      <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-zinc-500 border-t-transparent animate-spin rounded-full" />
+                      </div>
+                    ) : isPlaying ? (
+                      <Pause size={20} fill="currentColor" />
+                    ) : (
+                      <Play size={20} className="translate-x-0.5" fill="currentColor" />
+                    )}
                 </button>
 
                 {/* Reverse Toggle Button */}

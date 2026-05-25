@@ -71,8 +71,8 @@ export class AudioEngine {
     this.gainA = new Tone.Gain(1); // pre-fader trim gain
     this.gainB = new Tone.Gain(1); // pre-fader trim gain
 
-    this.faderGainA = new Tone.Gain(0.5); // channel volumes
-    this.faderGainB = new Tone.Gain(0.5);
+    this.faderGainA = new Tone.Gain(0.33); // channel volumes
+    this.faderGainB = new Tone.Gain(0.33);
 
     this.xfadeGainA = new Tone.Gain(1.0); // crossfader mixers
     this.xfadeGainB = new Tone.Gain(1.0);

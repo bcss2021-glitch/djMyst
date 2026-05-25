@@ -125,7 +125,7 @@ export default function App() {
     B: { low: 0, mid: 0, high: 0 },
   });
   const [filterState, setFilterState] = useState({ A: 0, B: 0 });
-  const [volumeState, setVolumeState] = useState({ A: 0.5, B: 0.5 });
+  const [volumeState, setVolumeState] = useState({ A: 0.33, B: 0.33 });
   const [crossfade, setCrossfade] = useState(0.5);
   const [xfaderCurve, setXfaderCurve] = useState(0.5);
   const [viewMode, setViewMode] = useState<'A' | 'B' | 'MIXER'>('A');
@@ -1217,6 +1217,17 @@ export default function App() {
                     </div>
                 )}
             </div>
+
+            {loadingState[deck] && (
+              <div className="absolute inset-0 z-30 bg-[#070709]/85 backdrop-blur-[3px] flex flex-col items-center justify-center border border-white/5">
+                <div className="flex flex-col items-center gap-2">
+                  <div className={`w-5 h-5 border-2 border-t-transparent animate-spin rounded-full ${deck === 'A' ? 'border-blue-400' : 'border-purple-400'}`} />
+                  <span className={`text-[8px] uppercase font-black tracking-widest font-mono select-none ${deck === 'A' ? 'text-blue-400' : 'text-purple-400'}`}>
+                    ANALYZING & BUFFERING WAVEFORM...
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </section>
