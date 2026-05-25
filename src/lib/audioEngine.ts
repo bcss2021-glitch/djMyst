@@ -269,22 +269,37 @@ export class AudioEngine {
     
     this.crossfader.fade.value = fadeVal;
 
-    // To prevent any sound bleed at the extremes, explicitly mute via the gain nodes:
-    // If we are fully on the left (fadeVal is 0), Channel B should be completely silent (0 gain)
-    if (fadeVal <= 0.01) {
-      this.xfadeMuteGainA.gain.value = 1;
-      this.xfadeMuteGainB.gain.value = 0;
-    } 
-    // If we are fully on the right (fadeVal is 1), Channel A should be completely silent (0 gain)
-    else if (fadeVal >= 0.99) {
-      this.xfadeMuteGainA.gain.value = 0;
-      this.xfadeMuteGainB.gain.value = 1;
-    } 
-    // Otherwise, both gains are 1 (since the Tone.CrossFade is handling the blending in between)
-    else {
-      this.xfadeMuteGainA.gain.value = 1;
-      this.xfadeMuteGainB.gain.value = 1;
+    // Apply professional Equal Gain DJ crossfader curve to prevent split bleed
+    let gainA = 1;
+    let gainB = 1;
+
+    if (this.crossfadeCurve > 0.8) {
+      if (fadeVal === 0) {
+        gainA = 1;
+        gainB = 0;
+      } else if (fadeVal === 1) {
+        gainA = 0;
+        gainB = 1;
+      } else {
+        gainA = 1;
+        gainB = 1;
+      }
+    } else {
+      // Equal Gain / Constant Power blend
+      // If we are leaning to the left (<= 0.5), Deck A is 100%, Deck B fades linearly to 0
+      if (fadeVal <= 0.5) {
+        gainA = 1;
+        gainB = Math.max(0, Math.min(1, fadeVal * 2));
+      } else {
+        // If we are leaning to the right (> 0.5), Deck B is 100%, Deck A fades linearly to 0
+        gainB = 1;
+        gainA = Math.max(0, Math.min(1, (1 - fadeVal) * 2));
+      }
     }
+
+    // Assign gain values safely
+    this.xfadeMuteGainA.gain.value = gainA;
+    this.xfadeMuteGainB.gain.value = gainB;
   }
 
   setPlaybackRate(deck: 'A' | 'B', rate: number) {

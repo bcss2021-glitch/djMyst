@@ -415,16 +415,21 @@ export default function App() {
     
     let cfFactor = 1;
     let fadeVal = crossfade;
-    if (xfaderCurve > 0.8) {
-      if (crossfade < 0.45) fadeVal = 0;
-      else if (crossfade > 0.55) fadeVal = 1;
-      else fadeVal = 0.5;
-    }
     
-    if (deck === 'A') {
-      cfFactor = fadeVal <= 0.01 ? 1 : (fadeVal >= 0.99 ? 0 : 1 - fadeVal);
+    if (xfaderCurve > 0.8) {
+      // Hard cut / Battle curve logic
+      if (deck === 'A') {
+        cfFactor = fadeVal >= 0.99 ? 0 : 1;
+      } else {
+        cfFactor = fadeVal <= 0.01 ? 0 : 1;
+      }
     } else {
-      cfFactor = fadeVal >= 0.99 ? 1 : (fadeVal <= 0.01 ? 0 : fadeVal);
+      // Equal Gain / Constant Power blend
+      if (deck === 'A') {
+        cfFactor = fadeVal <= 0.5 ? 1 : Math.max(0, Math.min(1, (1 - fadeVal) * 2));
+      } else {
+        cfFactor = fadeVal >= 0.5 ? 1 : Math.max(0, Math.min(1, fadeVal * 2));
+      }
     }
     
     return Math.max(0, Math.min(1, channelVol * deckGain * cfFactor));

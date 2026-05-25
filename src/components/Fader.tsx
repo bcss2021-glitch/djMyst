@@ -31,6 +31,9 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     const touch = e.touches[0];
     handleInteractionStart(touch.clientX, touch.clientY, true);
   };
@@ -106,7 +109,7 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
           `}
           style={{ 
             [vertical ? 'bottom' : 'left']: `${value * 100}%`,
-            [vertical ? 'translateY' : 'translateX']: vertical ? '50%' : '-50%'
+            transform: vertical ? 'translateY(50%)' : 'translateX(-50%)'
           }}
         >
           {/* Fader Handle Line */}
