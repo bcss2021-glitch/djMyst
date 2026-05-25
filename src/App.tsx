@@ -63,6 +63,7 @@ export default function App() {
   const [audiusTracks, setAudiusTracks] = useState<AudiusTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loadingState, setLoadingState] = useState({ A: false, B: false });
+  const [syncActive, setSyncActive] = useState({ A: false, B: false });
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeLoadingUrlRef = useRef<{ A: string | null, B: string | null }>({ A: null, B: null });
   const wasPlayingBeforeScratch = useRef<Record<'A' | 'B', boolean>>({ A: false, B: false });
@@ -168,6 +169,9 @@ export default function App() {
   };
 
   const loadTrack = async (deck: 'A' | 'B', name: string, urlOrId: string, isAudius = false, config?: TrackConfig) => {
+    // Reset sync lock state on track load
+    setSyncActive(prev => ({ ...prev, [deck]: false }));
+
     // Determine if it's an external URL (YouTube/Spotify)
     const isYouTube = urlOrId.includes('youtube.com') || urlOrId.includes('youtu.be');
     const isSpotify = urlOrId.includes('spotify.com');
@@ -647,6 +651,7 @@ export default function App() {
   const handleRateChange = (deck: 'A' | 'B', val: number) => {
     audioEngine.setPlaybackRate(deck, val);
     setPlaybackRates(prev => ({ ...prev, [deck]: val }));
+    setSyncActive(prev => ({ ...prev, [deck]: false }));
   };
 
   const exportPlaylist = () => {
@@ -682,10 +687,13 @@ export default function App() {
 
   const handleSync = (targetDeck: 'A' | 'B') => {
     const sourceDeck = targetDeck === 'A' ? 'B' : 'A';
+    // Sync only functions if both decks have active track URLs
+    if (!trackInfo.A.url || !trackInfo.B.url) return;
     const sourceRate = playbackRates[sourceDeck];
     
     audioEngine.setPlaybackRate(targetDeck, sourceRate);
     setPlaybackRates(prev => ({ ...prev, [targetDeck]: sourceRate }));
+    setSyncActive({ A: true, B: true });
   };
 
   const handleFxChange = (deck: 'A' | 'B', type: 'crush' | 'reverb' | 'echo' | 'flanger', val: number) => {
@@ -1260,7 +1268,7 @@ export default function App() {
                   onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, A: true }))}
                   onPlayPause={() => togglePlay('A')}
                   onSync={() => handleSync('A')}
-                  isSynced={playbackRates.A === playbackRates.B && !!trackInfo.A.url && !!trackInfo.B.url}
+                  isSynced={syncActive.A && !!trackInfo.A.url && !!trackInfo.B.url}
                   playbackRate={playbackRates.A}
                   onRateChange={(v) => handleRateChange('A', v)}
                   onPitchBend={(v) => handlePitchBend('A', v)}
@@ -1328,7 +1336,7 @@ export default function App() {
                 onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, B: true }))}
                 onPlayPause={() => togglePlay('B')}
                 onSync={() => handleSync('B')}
-                isSynced={playbackRates.A === playbackRates.B && !!trackInfo.A.url && !!trackInfo.B.url}
+                isSynced={syncActive.B && !!trackInfo.A.url && !!trackInfo.B.url}
                 playbackRate={playbackRates.B}
                 onRateChange={(v) => handleRateChange('B', v)}
                 onPitchBend={(v) => handlePitchBend('B', v)}

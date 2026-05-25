@@ -500,15 +500,34 @@ export default function Deck({
              
              {/* Beat Rolls */}
              <div className="space-y-2">
-                <div className="text-[7px] font-black uppercase tracking-widest text-white/20">Beat Roll / Repeat</div>
+                <div className="flex justify-between items-center">
+                  <div className="text-[7px] font-black uppercase tracking-widest text-white/20">Beat Roll / Repeat</div>
+                  {sourceType === 'EXTERNAL' && (
+                    <div className="text-[6px] font-black text-amber-500 uppercase tracking-widest leading-none bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-sm">Local Only</div>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                     {(['1/4', '1/8', '1/16'] as const).map((div) => (
                         <button 
                             key={div}
-                            onMouseDown={() => onRoll?.(div)}
-                            onMouseUp={() => onRoll?.(null)}
-                            onMouseLeave={() => onRoll?.(null)}
-                            className={`h-8 rounded-sm border text-[8px] font-black transition-all tactile-button ${activeRoll === div ? glowClass : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'}`}
+                            onClick={() => {
+                              if (sourceType === 'EXTERNAL') return;
+                              if (activeRoll === div) {
+                                onRoll?.(null);
+                              } else {
+                                onRoll?.(div);
+                              }
+                            }}
+
+                            disabled={sourceType === 'EXTERNAL'}
+                            title={sourceType === 'EXTERNAL' ? "Beat rolls are not supported for YouTube/Spotify tracks" : `Toggle ${div} Beat Loop`}
+                            className={`h-8 rounded-sm border text-[8px] font-black transition-all tactile-button ${
+                              sourceType === 'EXTERNAL'
+                                ? 'bg-zinc-900/40 border-white/5 text-zinc-550/40 cursor-not-allowed opacity-40 select-none'
+                                : activeRoll === div 
+                                ? glowClass 
+                                : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'
+                            }`}
                         >
                             {div}
                         </button>
