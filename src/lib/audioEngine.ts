@@ -71,8 +71,8 @@ export class AudioEngine {
     this.gainA = new Tone.Gain(1); // pre-fader trim gain
     this.gainB = new Tone.Gain(1); // pre-fader trim gain
 
-    this.faderGainA = new Tone.Gain(0.8); // channel volumes
-    this.faderGainB = new Tone.Gain(0.8);
+    this.faderGainA = new Tone.Gain(0.5); // channel volumes
+    this.faderGainB = new Tone.Gain(0.5);
 
     this.xfadeGainA = new Tone.Gain(1.0); // crossfader mixers
     this.xfadeGainB = new Tone.Gain(1.0);
@@ -349,12 +349,26 @@ export class AudioEngine {
   }
 
   async loadTrack(deck: 'A' | 'B', url: string) {
-    const player = this.getDeck(deck);
-    
-    // Stop and clear before loading new
-    if (player.state === 'started') {
-      player.stop();
+    // Completely dispose of the old Tone.Player to cancel any pending downloads or locks
+    const oldPlayer = this.getDeck(deck);
+    try {
+      if (oldPlayer) {
+        oldPlayer.stop();
+        oldPlayer.dispose();
+      }
+    } catch (e) {
+      console.warn("Error disposing old player node:", e);
     }
+
+    const player = new Tone.Player();
+    player.connect(deck === 'A' ? this.gainA : this.gainB);
+    
+    if (deck === 'A') {
+      this.deckA = player;
+    } else {
+      this.deckB = player;
+    }
+    
     this.playOffset[deck] = 0;
     this.playStartTime[deck] = 0;
     

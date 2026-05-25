@@ -125,7 +125,7 @@ export default function App() {
     B: { low: 0, mid: 0, high: 0 },
   });
   const [filterState, setFilterState] = useState({ A: 0, B: 0 });
-  const [volumeState, setVolumeState] = useState({ A: 0.8, B: 0.8 });
+  const [volumeState, setVolumeState] = useState({ A: 0.5, B: 0.5 });
   const [crossfade, setCrossfade] = useState(0.5);
   const [xfaderCurve, setXfaderCurve] = useState(0.5);
   const [viewMode, setViewMode] = useState<'A' | 'B' | 'MIXER'>('A');
@@ -365,7 +365,9 @@ export default function App() {
 
   const togglePlay = (deck: 'A' | 'B') => {
     if (!trackInfo[deck].url || loadingState[deck]) return;
-    audioEngine.playPause(deck);
+    if (deckSources[deck] === 'AUDIO') {
+      audioEngine.playPause(deck);
+    }
     setPlayingState(prev => ({ ...prev, [deck]: !prev[deck] }));
   };
 
@@ -390,7 +392,7 @@ export default function App() {
 
   const handleHotCue = (deck: 'A' | 'B', index: number) => {
     const trackId = trackInfo[deck].id;
-    if (!trackId) return;
+    if (!trackId || deckSources[deck] === 'EXTERNAL') return;
 
     const currentTime = audioEngine.getPosition(deck);
     
@@ -410,6 +412,7 @@ export default function App() {
   };
 
   const handleLoopIn = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     const pos = audioEngine.getPosition(deck);
     setLoopState(prev => ({
       ...prev,
@@ -418,6 +421,7 @@ export default function App() {
   };
 
   const handleLoopOut = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     const start = loopState[deck].in;
     if (start === null) return;
     const end = audioEngine.getPosition(deck);
@@ -431,6 +435,7 @@ export default function App() {
   };
 
   const handleExitLoop = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     audioEngine.clearLoop(deck);
     setLoopState(prev => ({
       ...prev,
@@ -534,6 +539,7 @@ export default function App() {
   };
 
   const handleRewind = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     try {
       audioEngine.seek(deck, 0);
     } catch (e) {
@@ -542,7 +548,7 @@ export default function App() {
   };
 
   const handleCuePress = (deck: 'A' | 'B') => {
-    if (!trackInfo[deck].url || loadingState[deck]) return;
+    if (!trackInfo[deck].url || loadingState[deck] || deckSources[deck] === 'EXTERNAL') return;
     try {
       const isCurrentlyPlaying = playingState[deck];
       if (isCurrentlyPlaying) {
@@ -569,7 +575,7 @@ export default function App() {
   };
 
   const handleCueRelease = (deck: 'A' | 'B') => {
-    if (!trackInfo[deck].url || loadingState[deck]) return;
+    if (!trackInfo[deck].url || loadingState[deck] || deckSources[deck] === 'EXTERNAL') return;
     try {
       if (isCueActive[deck]) {
         audioEngine.playPause(deck);
@@ -582,6 +588,7 @@ export default function App() {
   };
 
   const handleReverseToggle = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     try {
       const targetState = !reverseStates[deck];
       audioEngine.setReverse(deck, targetState);
@@ -592,6 +599,7 @@ export default function App() {
   };
 
   const handleScratchDrag = (deck: 'A' | 'B', deltaSeconds: number) => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     try {
       audioEngine.scratchSeek(deck, deltaSeconds);
     } catch (e) {
@@ -600,6 +608,7 @@ export default function App() {
   };
 
   const handleScratchStart = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     try {
       wasPlayingBeforeScratch.current[deck] = playingState[deck];
       if (playingState[deck]) {
@@ -611,6 +620,7 @@ export default function App() {
   };
 
   const handleScratchEnd = (deck: 'A' | 'B') => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     try {
       if (wasPlayingBeforeScratch.current[deck]) {
         audioEngine.playPause(deck);
@@ -621,6 +631,7 @@ export default function App() {
   };
 
   const handleWaveformSeek = (deck: 'A' | 'B', time: number) => {
+    if (deckSources[deck] === 'EXTERNAL') return;
     try {
       audioEngine.seek(deck, time);
     } catch (e) {

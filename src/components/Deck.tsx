@@ -315,14 +315,22 @@ export default function Deck({
               volume={resolvedVolume}
               muted={resolvedVolume === 0}
               controls={true}
+              playsinline={true}
               width="100%"
               height="100%"
               style={{ position: 'absolute', top: 0, left: 0 }}
               config={{
-                youtube: { origin: window.location.origin }
+                youtube: {
+                  playerVars: {
+                    autoplay: 0,
+                    playsinline: 1,
+                    controls: 1,
+                    mute: 0,
+                    enablejsapi: 1
+                  }
+                }
               }}
             />
-            <div className="absolute inset-0 bg-transparent z-10 pointer-events-none" />
           </div>
 
           <div className="w-full flex justify-center mb-4">
