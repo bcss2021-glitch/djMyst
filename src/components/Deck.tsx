@@ -527,7 +527,7 @@ export default function Deck({
               <button onClick={onSync} className={`flex-1 px-3 bg-white/5 border border-white/10 rounded-sm text-[8px] font-black tracking-widest text-white/40 hover:text-brand-cyan transition-all tactile-button hover:border-brand-cyan/30 uppercase`}>SYNC</button>
             </div>
             
-            <div className="flex gap-1.5 items-center">
+            <div className="flex gap-1.5 items-center justify-center">
                 {/* Quick Rewind button */}
                 <button 
                     onClick={onRewind}
@@ -537,6 +537,35 @@ export default function Deck({
                     <Rewind size={14} fill="currentColor" />
                 </button>
                 
+                {/* Main Play/Pause */}
+                <button onClick={onPlayPause} className="play-button w-12 h-12 tactile-button">
+                    {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} className="translate-x-0.5" fill="currentColor" />}
+                </button>
+
+                {/* Reverse Toggle Button */}
+                <button 
+                  onClick={onReverseToggle}
+                  className={`w-8 h-8 rounded-full border flex items-center justify-center text-[8px] font-black tracking-tighter uppercase transition-all tactile-button ${
+                    isReversed 
+                      ? (id === 'A' ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'bg-pink-500/20 border-pink-500 text-pink-400 shadow-[0_0_8px_rgba(236,72,153,0.3)]')
+                      : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'
+                  }`}
+                  title="Reverse playback direction"
+                >
+                  REV
+                </button>
+            </div>
+
+            <div className="flex gap-1.5 items-center justify-center">
+                {/* Fast Rewind button */}
+                <button 
+                    onClick={() => onScratchDrag?.(-10)}
+                    className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20 active:scale-95 transition-all text-[8px] font-black tactile-button"
+                    title="Fast Rewind 10s"
+                >
+                    <Rewind size={14} />
+                </button>
+
                 {/* Hold/Strike Cue Button */}
                 <button 
                     onMouseDown={onCuePress}
@@ -559,22 +588,13 @@ export default function Deck({
                     <span className="text-[10px]">CUE</span>
                 </button>
 
-                {/* Main Play/Pause */}
-                <button onClick={onPlayPause} className="play-button w-12 h-12 tactile-button">
-                    {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} className="translate-x-0.5" fill="currentColor" />}
-                </button>
-
-                {/* Reverse Toggle Button */}
+                {/* Fast Forward button */}
                 <button 
-                  onClick={onReverseToggle}
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center text-[8px] font-black tracking-tighter uppercase transition-all tactile-button ${
-                    isReversed 
-                      ? (id === 'A' ? 'bg-amber-500/20 border-amber-500 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.3)]' : 'bg-pink-500/20 border-pink-500 text-pink-400 shadow-[0_0_8px_rgba(236,72,153,0.3)]')
-                      : 'bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10'
-                  }`}
-                  title="Reverse playback direction"
+                    onClick={() => onScratchDrag?.(10)}
+                    className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20 active:scale-95 transition-all text-[8px] font-black tactile-button"
+                    title="Fast Forward 10s"
                 >
-                  REV
+                    <FastForward size={14} />
                 </button>
             </div>
         </div>
