@@ -126,6 +126,7 @@ interface DeckProps {
   onLoopIn?: () => void;
   onLoopOut?: () => void;
   onExitLoop?: () => void;
+  resolvedVolume?: number;
 }
 
 export default function Deck({ 
@@ -133,7 +134,7 @@ export default function Deck({
   playbackRate, onRateChange, onPitchBend, fx, onFxChange, 
   onPadTrigger, onRoll, activeRoll, onSaveConfig, sourceType = 'AUDIO', externalUrl,
   keyLock, onKeyLockToggle, gain = 1, onGainChange, hotCues = [], onHotCue, onClearCues,
-  loop, onLoopIn, onLoopOut, onExitLoop
+  loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
@@ -156,6 +157,9 @@ export default function Deck({
             <Player 
               url={externalUrl} 
               playing={isPlaying}
+              volume={resolvedVolume}
+              muted={resolvedVolume === 0}
+              controls={true}
               width="100%"
               height="100%"
               style={{ position: 'absolute', top: 0, left: 0 }}
@@ -163,7 +167,7 @@ export default function Deck({
                 youtube: { origin: window.location.origin }
               }}
             />
-            <div className="absolute inset-0 bg-transparent z-10" />
+            <div className="absolute inset-0 bg-transparent z-10 pointer-events-none" />
           </div>
 
           <div className="flex items-center gap-4">

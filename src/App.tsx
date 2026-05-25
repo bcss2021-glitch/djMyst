@@ -409,6 +409,27 @@ export default function App() {
     setVolumeState(prev => ({ ...prev, [deck]: val }));
   };
 
+  const getResolvedVolume = (deck: 'A' | 'B') => {
+    const channelVol = volumeState[deck];
+    const deckGain = gainState[deck];
+    
+    let cfFactor = 1;
+    let fadeVal = crossfade;
+    if (xfaderCurve > 0.8) {
+      if (crossfade < 0.45) fadeVal = 0;
+      else if (crossfade > 0.55) fadeVal = 1;
+      else fadeVal = 0.5;
+    }
+    
+    if (deck === 'A') {
+      cfFactor = fadeVal <= 0.01 ? 1 : (fadeVal >= 0.99 ? 0 : 1 - fadeVal);
+    } else {
+      cfFactor = fadeVal >= 0.99 ? 1 : (fadeVal <= 0.01 ? 0 : fadeVal);
+    }
+    
+    return Math.max(0, Math.min(1, channelVol * deckGain * cfFactor));
+  };
+
   const handleCrossfadeChange = (val: number) => {
     audioEngine.setCrossfade(val);
     setCrossfade(val);
@@ -744,6 +765,7 @@ export default function App() {
                   onLoopIn={() => handleLoopIn('A')}
                   onLoopOut={() => handleLoopOut('A')}
                   onExitLoop={() => handleExitLoop('A')}
+                  resolvedVolume={getResolvedVolume('A')}
                 />
           </div>
 
@@ -797,6 +819,7 @@ export default function App() {
                 onLoopIn={() => handleLoopIn('B')}
                 onLoopOut={() => handleLoopOut('B')}
                 onExitLoop={() => handleExitLoop('B')}
+                resolvedVolume={getResolvedVolume('B')}
               />
           </div>
         </div>

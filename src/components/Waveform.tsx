@@ -30,6 +30,12 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: 
       cursorWidth: 1
     });
 
+    try {
+      wavesurferRef.current.setVolume(0);
+    } catch (e) {
+      console.warn("WaveSurfer setVolume failed on creation", e);
+    }
+
     return () => {
       wavesurferRef.current?.destroy();
     };
@@ -38,6 +44,11 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId }: 
   useEffect(() => {
     if (url && wavesurferRef.current) {
       wavesurferRef.current.load(url);
+      try {
+        wavesurferRef.current.setVolume(0);
+      } catch (e) {
+        console.warn("WaveSurfer setVolume failed, continuing since muted: true occupies this", e);
+      }
     }
   }, [url]);
 

@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { useRef } from 'react';
 
 interface FaderProps {
   value: number;
@@ -9,13 +10,78 @@ interface FaderProps {
 }
 
 export default function Fader({ value, onChange, vertical = true, label, className = "" }: FaderProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(parseFloat(e.target.value));
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const updateValueFromCoords = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    let newValue = 0;
+    if (vertical) {
+      newValue = (rect.bottom - clientY) / rect.height;
+    } else {
+      newValue = (clientX - rect.left) / rect.width;
+    }
+    newValue = Math.max(0, Math.min(1, newValue));
+    onChange(newValue);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleInteractionStart(e.clientX, e.clientY, false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    handleInteractionStart(touch.clientX, touch.clientY, true);
+  };
+
+  const handleInteractionStart = (clientX: number, clientY: number, isTouchEvent: boolean) => {
+    updateValueFromCoords(clientX, clientY);
+
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      let currentX = 0;
+      let currentY = 0;
+      if ('touches' in e) {
+        if (e.touches.length > 0) {
+          currentX = e.touches[0].clientX;
+          currentY = e.touches[0].clientY;
+        } else {
+          return;
+        }
+      } else {
+        currentX = e.clientX;
+        currentY = e.clientY;
+      }
+      updateValueFromCoords(currentX, currentY);
+    };
+
+    const handleEnd = () => {
+      if (isTouchEvent) {
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleEnd);
+      } else {
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+      }
+    };
+
+    if (isTouchEvent) {
+      window.addEventListener('touchmove', handleMove, { passive: false });
+      window.addEventListener('touchend', handleEnd);
+    } else {
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+    }
   };
 
   return (
     <div className={`flex flex-col items-center select-none ${className}`}>
-      <div className={`relative ${vertical ? 'h-full w-10' : 'w-full h-8'}`}>
+      <div 
+        ref={containerRef}
+        className={`relative cursor-pointer ${vertical ? 'h-full w-10' : 'w-full h-8'}`}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+      >
         {/* Track Markings */}
         <div className={`absolute inset-0 pointer-events-none ${vertical ? 'flex flex-col justify-between py-1' : 'flex justify-between px-1'}`}>
           {[...Array(11)].map((_, i) => (
@@ -25,19 +91,6 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
             />
           ))}
         </div>
-
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.001"
-          value={value}
-          onChange={handleChange}
-          className={`
-            absolute appearance-none bg-transparent cursor-pointer z-20
-            ${vertical ? '-rotate-90 origin-center w-32 h-10 -translate-y-1/2 top-1/2 left-1/2 -translate-x-1/2' : 'w-full h-full'}
-          `}
-        />
         
         {/* Physical Track */}
         <div className={`
@@ -53,7 +106,7 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
           `}
           style={{ 
             [vertical ? 'bottom' : 'left']: `${value * 100}%`,
-            [vertical ? 'translateY' : 'translateX']: '50%'
+            [vertical ? 'translateY' : 'translateX']: vertical ? '50%' : '-50%'
           }}
         >
           {/* Fader Handle Line */}
