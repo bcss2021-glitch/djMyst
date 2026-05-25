@@ -34,6 +34,9 @@ export class AudioEngine {
   
   private playStartTime = { A: 0, B: 0 };
   private playOffset = { A: 0, B: 0 };
+  private loopStartTime = { A: 0, B: 0 };
+  private loopStartPos = { A: 0, B: 0 };
+  private loopEndPos = { A: 0, B: 0 };
   
   private recorder: Tone.Recorder = new Tone.Recorder();
 
@@ -468,11 +471,23 @@ export class AudioEngine {
     player.loop = true;
     player.loopStart = start;
     player.loopEnd = end;
+    this.loopStartTime[deck] = Tone.now();
+    this.loopStartPos[deck] = start;
+    this.loopEndPos[deck] = end;
   }
 
   clearLoop(deck: 'A' | 'B') {
     const player = this.getDeck(deck);
-    player.loop = false;
+    if (player.loop) {
+      player.loop = false;
+      const loopLen = this.loopEndPos[deck] - this.loopStartPos[deck];
+      if (player.state === 'started' && loopLen > 0) {
+        const elapsed = (Tone.now() - this.loopStartTime[deck]) * player.playbackRate;
+        const offset = elapsed % loopLen;
+        const currentPos = this.loopStartPos[deck] + offset;
+        this.seek(deck, currentPos);
+      }
+    }
   }
 
   setGain(deck: 'A' | 'B', value: number) {

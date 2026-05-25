@@ -88,7 +88,7 @@ export default function App() {
     }
   });
   
-  const [activeLibraryTab, setActiveLibraryTab] = useState<'CRATES' | 'PLAYLIST' | 'FAVORITES' | 'HISTORY' | 'YOUTUBE' | 'SPOTIFY'>('CRATES');
+  const [activeLibraryTab, setActiveLibraryTab] = useState<'CRATES' | 'PLAYLIST' | 'FAVORITES' | 'HISTORY' | 'YOUTUBE' | 'SPOTIFY'>('FAVORITES');
   const [deckSources, setDeckSources] = useState<{ A: 'AUDIO' | 'EXTERNAL', B: 'AUDIO' | 'EXTERNAL' }>({ A: 'AUDIO', B: 'AUDIO' });
   const [externalUrls, setExternalUrls] = useState<{ A: string | null, B: string | null }>({ A: null, B: null });
 
@@ -705,21 +705,22 @@ export default function App() {
   };
 
   const handleRoll = (deck: 'A' | 'B', division: '1/4' | '1/8' | '1/16' | null) => {
-    if (!division) {
+    // If there is already an active beat roll, clear it first to align correct playing offsets
+    if (rollState[deck]) {
       audioEngine.clearLoop(deck);
+    }
+
+    if (!division) {
       setRollState(prev => ({ ...prev, [deck]: null }));
       return;
     }
 
     const pos = audioEngine.getPosition(deck);
-    const duration = division === '1/4' ? 0.25 : (division === '1/8' ? 0.125 : 0.0625);
-    // Simple beat roll approximation: 120bpm -> 1 beat = 0.5s. 1/4 = 0.125s.
-    // For now we'll just use fixed time based on division for the loop region.
-    // In a real app we'd sync with current BPM.
     const beatLen = 60 / baseBpm;
     const loopLen = beatLen * (division === '1/4' ? 0.25 : (division === '1/8' ? 0.125 : 0.0625));
     
     audioEngine.setLoop(deck, pos, pos + loopLen);
+    audioEngine.seek(deck, pos);
     setRollState(prev => ({ ...prev, [deck]: division }));
   };
 
