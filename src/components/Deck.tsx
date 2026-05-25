@@ -282,6 +282,7 @@ interface DeckProps {
   onScratchEnd?: () => void;
   onPlayerReady?: () => void;
   onPlayerBuffer?: () => void;
+  isSynced?: boolean;
 }
 
 export default function Deck({ 
@@ -291,7 +292,7 @@ export default function Deck({
   keyLock, onKeyLockToggle, gain = 1, onGainChange, hotCues = [], onHotCue, onClearCues,
   loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1,
   onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
-  onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer
+  onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer, isSynced = false
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
@@ -575,7 +576,16 @@ export default function Deck({
               >
                 MT
               </button>
-              <button onClick={onSync} className={`flex-1 px-3 bg-white/5 border border-white/10 rounded-sm text-[8px] font-black tracking-widest text-white/40 hover:text-brand-cyan transition-all tactile-button hover:border-brand-cyan/30 uppercase`}>SYNC</button>
+              <button 
+                onClick={onSync} 
+                className={`flex-1 px-3 border rounded-sm text-[8px] font-black tracking-widest transition-all uppercase tactile-button ${
+                  isSynced 
+                    ? 'active-glow-green border-green-500/50' 
+                    : 'bg-white/5 border border-white/10 text-white/20 hover:text-brand-cyan hover:border-brand-cyan/30'
+                }`}
+              >
+                SYNC
+              </button>
             </div>
             
             <div className="flex gap-1.5 items-center justify-center">

@@ -1260,6 +1260,7 @@ export default function App() {
                   onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, A: true }))}
                   onPlayPause={() => togglePlay('A')}
                   onSync={() => handleSync('A')}
+                  isSynced={playbackRates.A === playbackRates.B && !!trackInfo.A.url && !!trackInfo.B.url}
                   playbackRate={playbackRates.A}
                   onRateChange={(v) => handleRateChange('A', v)}
                   onPitchBend={(v) => handlePitchBend('A', v)}
@@ -1327,6 +1328,7 @@ export default function App() {
                 onPlayerBuffer={() => setLoadingState(prev => ({ ...prev, B: true }))}
                 onPlayPause={() => togglePlay('B')}
                 onSync={() => handleSync('B')}
+                isSynced={playbackRates.A === playbackRates.B && !!trackInfo.A.url && !!trackInfo.B.url}
                 playbackRate={playbackRates.B}
                 onRateChange={(v) => handleRateChange('B', v)}
                 onPitchBend={(v) => handlePitchBend('B', v)}
