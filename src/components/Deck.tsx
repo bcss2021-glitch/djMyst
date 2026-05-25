@@ -325,6 +325,17 @@ export default function Deck({
             <div className="absolute inset-0 bg-transparent z-10 pointer-events-none" />
           </div>
 
+          <div className="w-full flex justify-center mb-4">
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 max-w-sm text-center">
+              <div className="flex items-center justify-center gap-1.5 text-amber-400 text-[9px] font-black uppercase mb-1">
+                <AlertTriangle size={12} className="animate-pulse" /> Browser Audio Safe-Guard
+              </div>
+              <p className="text-[10px] text-zinc-300 leading-normal">
+                Modern browsers block audio on loaded links until you <strong className="text-amber-400">click/tap directly inside the YouTube iframe once</strong>. Tap the player frame directly to hear sound!
+              </p>
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
              <button 
                onClick={onPlayPause}
