@@ -318,25 +318,32 @@
           <h2 class="text-2xl font-display font-semibold text-white mt-1">THE JOOWHEELS & THE ART OF SCRATCHING</h2>
         </div>
         <p class="text-zinc-400 text-sm leading-relaxed">
-          The giant circular discs in the center of both decks are touch-sensitive <strong class="text-white">JogWheels / Platters</strong>. These are not merely spinning graphics; they possess fully simulated physical weight, surface drag, and multi-touch sensors.
+          The giant circular discs in the center of both decks are touch-sensitive <strong class="text-white">JogWheels / Platters</strong>. These are not merely spinning graphics; they possess fully simulated physical weight, surface drag, and multi-touch sensors. They support customizable styles and **Slip Mode** for professional phrase mixing.
         </p>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-zinc-950/40 p-5 rounded-lg border border-white/5 space-y-3">
-            <h4 class="text-brand-cyan font-display text-xs font-bold uppercase tracking-widest">PRO MOTION DECK SENSING</h4>
+            <h4 class="text-brand-cyan font-display text-xs font-bold uppercase tracking-widest">PLATTER DESIGNS & STYLES</h4>
             <p class="text-xs text-zinc-400 leading-relaxed">
-              When a track plays, the outer ring is styled like strobe-dots rotating in perfect synchronicity. You can see your live track's play-position indicated by the glowing color markers (Cyan or Purple). 
+              Select your design theme using the <strong class="text-white">STYLE</strong> selector bar:
             </p>
+            <ul class="space-y-1.5 text-xs text-zinc-400">
+              <li>• <strong class="text-white">VINYL:</strong> Traditional radial grooves with a classic marker stripe.</li>
+              <li>• <strong class="text-white">CDJ:</strong> Spinning strobe dots around the perimeter, concentric speed rings, and rectangle marker.</li>
+              <li>• <strong class="text-white">NEON:</strong> Pulsing dual neon rings, spinning laser lines, and a glowing bubble playhead.</li>
+            </ul>
             <p class="text-xs text-zinc-400 leading-relaxed">
-              The center display isolates track BPM calculations and shows your exact temporary pitch bend values as a active percentage.
+              The center display isolates live tempo BPM and shows your exact pitch bend values.
             </p>
           </div>
           
           <div class="bg-zinc-950/40 p-5 rounded-lg border border-white/5 space-y-3">
-            <h4 class="text-brand-purple font-display text-xs font-bold uppercase tracking-widest font-mono">PHYSICAL OPERATOR GESTURES</h4>
+            <h4 class="text-brand-purple font-display text-xs font-bold uppercase tracking-widest font-mono">PHYSICAL MODES & GESTURES</h4>
             <ul class="space-y-2 text-xs text-zinc-400 font-mono">
-              <li><strong class="text-white">Left-Click & Drag (Circular):</strong> Grabs the vinyl surface. Dragging back-and-forth simulates real vinyl scratching, injecting live mechanical vinyl sound waves and letting you scrub perfectly to a beat.</li>
-              <li><strong class="text-white">Vertical Scroll Drag:</strong> Triggers temporary deceleration or acceleration (Pitch Bend) up to ±8%. Release the grab to snap back to the exact grid tempo instantly.</li>
+              <li><strong class="text-white">VINYL Mode:</strong> Touching the platter stops the music (Vinyl brake). Dragging back-and-forth scratches the track. Releasing resumes play.</li>
+              <li><strong class="text-white">CDJ Mode:</strong> Touching does not stop playback. Spinning clockwise/counter-clockwise bends the pitch (nudges the speed) to assist beatmatching.</li>
+              <li><strong class="text-white">SLIP Mode Toggle:</strong> When active, scratching or looping runs silently in the background. Releasing the platter snaps the playhead back to where the song would have reached if played straight.</li>
+              <li><strong class="text-white">TAP BPM Button:</strong> Click repeatedly to the beat to set the Base BPM for manual track calibration.</li>
             </ul>
           </div>
         </div>
@@ -409,15 +416,16 @@
           <div class="bg-[#0b0b0f] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
             <div>
               <div class="text-brand-cyan font-bold uppercase text-[9px] mb-2">1. FREQUENCY ISOLATORS</div>
-              <p class="text-[11px] leading-relaxed">Three rotary dials per channel control precise frequency isolators:</p>
-              <ul class="text-[10px] space-y-1 mt-2 pl-2">
+              <p class="text-[11px] leading-relaxed">Three rotary dials control precise frequency isolation, paired with **EQ Kill** switches:</p>
+              <ul class="text-[10px] space-y-1.5 mt-2 pl-2">
                 <li>• <strong class="text-white">HI:</strong> Adjusts highs (hiss, hats, air).</li>
                 <li>• <strong class="text-white">MID:</strong> Adjusts mids (voice, synths).</li>
                 <li>• <strong class="text-white">LOW:</strong> Boosts or cuts sub-bass kicks.</li>
+                <li>• <strong class="text-white">K (Kill) Buttons:</strong> Instantly mutes that frequency band (sets gain to -40dB). Knobs retain their settings so you can pre-adjust values before releasing the kill!</li>
               </ul>
             </div>
             <p class="text-[9px] text-yellow-500/80 mt-4 border-t border-white/5 pt-2">
-              ⚠️ NEVER blend two sub-basses at 100%. Cut one bass to 0% to avoid muddy, distorted speaker clipping!
+              ⚠️ NEVER blend two sub-basses at 100%. Cut one bass to 0% or use the Low Kill switch to avoid muddy, distorted speaker clipping!
             </p>
           </div>
           
@@ -438,11 +446,11 @@
           <div class="bg-[#0b0b0f] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
             <div>
               <div class="text-brand-cyan font-bold uppercase text-[9px] mb-2">3. LINE FADERS & CURVES</div>
-              <p class="text-[11px] leading-relaxed">The linear vertical sliders control channel levels, feeding into the horizontal crossfader bottom matrix:</p>
-              <ul class="text-[10px] space-y-1 mt-2 pl-2">
-                <li>• <strong class="text-white">CURVE:</strong> Tightens crossfader fade.</li>
-                <li>• <strong class="text-white">CLEAN SOUND:</strong> Resets Web Audio buffers instantly during glitch/stutters.</li>
-                <li>• <strong class="text-white">RESET CONSOLE:</strong> Instant zero-points.</li>
+              <p class="text-[11px] leading-relaxed">Vertical volume faders control channel levels, feeding into the crossfader at the bottom:</p>
+              <ul class="text-[10px] space-y-1.5 mt-2 pl-2">
+                <li>• <strong class="text-white">CURVE Knob:</strong> Sets the crossfader blend type: **Linear** (0.0-0.3) for smooth overlays, **Constant Power** (0.3-0.7) for standard blending, and **Battle Cut** (0.7-1.0) for fast scratching cuts.</li>
+                <li>• <strong class="text-white">CLEAN SOUND:</strong> Resets Web Audio buffers instantly to clear clicks or latency.</li>
+                <li>• <strong class="text-white">RESET CONSOLE:</strong> Snaps all EQ dials, filters, volumes, and EQ kills back to neutral.</li>
               </ul>
             </div>
             <p class="text-[9px] text-zinc-500 mt-4 border-t border-white/5 pt-2">

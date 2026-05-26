@@ -737,20 +737,32 @@ export class AudioEngine {
     }
 
     if (name === 'rave_siren') {
-      if (!this.sirenOsc) {
-        const filter = new Tone.Filter(1800, "lowpass").toDestination();
-        this.sirenGain = new Tone.Gain(0).connect(filter);
-        this.sirenOsc = new Tone.Oscillator("sawtooth").connect(this.sirenGain);
-        this.sirenOsc.start();
-      }
       try {
         const now = Tone.now();
-        this.sirenOsc.frequency.setValueAtTime(260, now);
-        this.sirenOsc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
+        const osc = new Tone.Oscillator("sawtooth");
+        const gain = new Tone.Gain(0);
+        const filter = new Tone.Filter(1800, "lowpass");
         
-        this.sirenGain.gain.setValueAtTime(0, now);
-        this.sirenGain.gain.linearRampToValueAtTime(0.12, now + 0.1);
-        this.sirenGain.gain.linearRampToValueAtTime(0, now + 1.4);
+        osc.connect(gain);
+        gain.connect(filter);
+        filter.toDestination();
+        
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
+        
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+        gain.gain.linearRampToValueAtTime(0, now + 1.4);
+        
+        osc.start(now);
+        osc.stop(now + 1.4);
+        
+        // Clean up references to prevent accumulation
+        setTimeout(() => {
+          osc.dispose();
+          gain.dispose();
+          filter.dispose();
+        }, 2000);
       } catch (e) {
         console.warn(e);
       }
@@ -758,19 +770,28 @@ export class AudioEngine {
     }
 
     if (name === 'sub_drop') {
-      if (!this.subOsc) {
-        this.subGain = new Tone.Gain(0).toDestination();
-        this.subOsc = new Tone.Oscillator("sine").connect(this.subGain);
-        this.subOsc.start();
-      }
       try {
         const now = Tone.now();
-        this.subOsc.frequency.setValueAtTime(100, now);
-        this.subOsc.frequency.exponentialRampToValueAtTime(32, now + 1.6);
+        const osc = new Tone.Oscillator("sine");
+        const gain = new Tone.Gain(0);
         
-        this.subGain.gain.setValueAtTime(0, now);
-        this.subGain.gain.linearRampToValueAtTime(0.26, now + 0.05);
-        this.subGain.gain.linearRampToValueAtTime(0, now + 1.6);
+        osc.connect(gain);
+        gain.toDestination();
+        
+        osc.frequency.setValueAtTime(120, now); // slightly higher start to be audible on more speakers
+        osc.frequency.exponentialRampToValueAtTime(36, now + 1.6);
+        
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.4, now + 0.05);
+        gain.gain.linearRampToValueAtTime(0, now + 1.6);
+        
+        osc.start(now);
+        osc.stop(now + 1.6);
+        
+        setTimeout(() => {
+          osc.dispose();
+          gain.dispose();
+        }, 2500);
       } catch (e) {
         console.warn(e);
       }
@@ -778,20 +799,31 @@ export class AudioEngine {
     }
 
     if (name === 'noise_sweep') {
-      if (!this.sweepNoise) {
-        this.sweepFilter = new Tone.Filter({ type: "bandpass", Q: 4.5, frequency: 250 }).toDestination();
-        this.sweepGain = new Tone.Gain(0).connect(this.sweepFilter);
-        this.sweepNoise = new Tone.Noise("white").connect(this.sweepGain);
-        this.sweepNoise.start();
-      }
       try {
         const now = Tone.now();
-        this.sweepFilter.frequency.setValueAtTime(250, now);
-        this.sweepFilter.frequency.exponentialRampToValueAtTime(7500, now + 1.5);
+        const noise = new Tone.Noise("white");
+        const gain = new Tone.Gain(0);
+        const filter = new Tone.Filter({ type: "bandpass", Q: 4.5, frequency: 250 });
         
-        this.sweepGain.gain.setValueAtTime(0, now);
-        this.sweepGain.gain.linearRampToValueAtTime(0.14, now + 0.1);
-        this.sweepGain.gain.linearRampToValueAtTime(0, now + 1.6);
+        noise.connect(gain);
+        gain.connect(filter);
+        filter.toDestination();
+        
+        filter.frequency.setValueAtTime(250, now);
+        filter.frequency.exponentialRampToValueAtTime(7500, now + 1.5);
+        
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.18, now + 0.1);
+        gain.gain.linearRampToValueAtTime(0, now + 1.6);
+        
+        noise.start(now);
+        noise.stop(now + 1.6);
+        
+        setTimeout(() => {
+          noise.dispose();
+          gain.dispose();
+          filter.dispose();
+        }, 2500);
       } catch (e) {
         console.warn(e);
       }

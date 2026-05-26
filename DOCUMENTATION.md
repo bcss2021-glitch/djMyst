@@ -13,9 +13,9 @@ A full-featured, browser-based DJ application built with React, Tone.js, and Tai
 
 ### 2. Mixer & Audio Quality
 - [ ] **Gain Staging**: Adjust the Gain knob on each deck; verify levels reach the master visualizer.
-- [ ] **EQ Isolation**: Turn down "Low" and verify bass frequencies are removed.
+- [ ] **EQ Isolation & Kills**: Turn down "Low" and verify bass frequencies are removed. Toggle "K" next to a band and verify the frequency cuts out completely.
 - [ ] **Filter Sweep**: Test the central Filter knob for Low-pass (left) and High-pass (right) effects.
-- [ ] **Crossfader**: Move the crossfader fully left/right and verify isolation between channels A and B.
+- [ ] **Crossfader Curves**: Set curve settings (Linear, Constant Power, Battle Cut) and verify blending response on local and external decks.
 
 ### 3. Performance FX (New)
 - [ ] **FX Panel**: Click the double-chevron on a deck to open the Specialized FX engine.
@@ -23,6 +23,9 @@ A full-featured, browser-based DJ application built with React, Tone.js, and Tai
 - [ ] **Beat Rolls**: Hold down 1/4, 1/8, or 1/16 buttons while a track is playing; verify the audio repeats in a loop until released.
 - [ ] **Hot Cues**: Play a track, click "1" in the Hot Points area to set a cue, then click it later to jump back instantly.
 - [ ] **Manual Loop**: Click "IN" then "OUT" to create a loop; verify it stays in sync.
+- [ ] **Platter Style Customization**: Toggle platter themes (VINYL, CDJ, NEON) and verify designs spin responsively.
+- [ ] **Slip Mode**: Engage "SLIP", scratch or loop, and verify playback snaps back to the virtual background playhead on release.
+- [ ] **BPM Tap**: Tap the manual "TAP BPM" button on the deck header to calibrate track BPM.
 
 ### 4. Library & Persistence
 - [ ] **Config Save**: Set a specific EQ/FX state, click "Save FX Preset to Track" in the FX engine, and reload the track to verify settings are remembered.

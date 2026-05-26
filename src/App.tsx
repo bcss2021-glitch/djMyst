@@ -210,13 +210,14 @@ export default function App() {
       trackingKey = file.name + '_' + file.size;
       const fileId = 'local_' + file.name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + file.size;
       
-      // Auto cache to IndexedDB for true robust reload-proof playlists/history/favorites
-      try {
-        await indexedDbCache.saveTrack(fileId, file.name, file.size, file.type, file);
-        refreshOfflineCrate();
-      } catch (err) {
-        console.warn("Auto-caching input file to IndexedDB failed:", err);
-      }
+      // Auto cache to IndexedDB asynchronously so it does not block loading latency
+      indexedDbCache.saveTrack(fileId, file.name, file.size, file.type, file)
+        .then(() => {
+          refreshOfflineCrate();
+        })
+        .catch((err) => {
+          console.warn("Auto-caching input file to IndexedDB failed:", err);
+        });
       
       finalUrl = URL.createObjectURL(file);
       savedId = 'indexeddb:' + fileId;

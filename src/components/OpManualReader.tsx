@@ -40,11 +40,12 @@ export default function OpManualReader() {
       deckAccent: 'A',
       content: 'Each side of the console behaves as an independent playback engine:',
       bullets: [
-        'Transport HUD: Shows active Waveform, remaining time in minutes/seconds, and active BPM.',
-        'Jogwheels / Vinyl: Displays rotating slipmats. Click/tap and drag horizontally to dynamic-scratch or nudge.',
-        'Tempo Slope Fader: Multi-percent pitch adjustment. Slide up or down to vary the deck\'s BPM manually.',
-        'Hot Cues Quadrant (1, 2, 3, 4): Store up to 4 instant trigger markings per song. Tap an empty pad to write, tap again to instantly warp to that spot. Press and hold (0.7s) to invoke a clean red wiping overlay animation to delete a cue (paired with mobile haptic vibe!), or right-click to clear.',
-        'Key Lock (MT): Activates professional Master Tempo pitch stabilization. Keeps vocal tracks in natural keys even at extreme speeds.'
+        'Transport HUD: Shows active Waveform, remaining time in minutes/seconds, and active BPM. Tapping the TAP BPM button allows manual tempo calculation.',
+        'Jogwheels / Vinyl: Displays rotating platters. Click/tap and drag horizontally to scratch or nudge. Select styling (VINYL grooves, CDJ strobe rings, or NEON spiral wave) to change platter visuals.',
+        'Tempo Slope Fader: Multi-percent pitch adjustment. Slide up or down to vary the deck\'s BPM. Double-tap to reset to normal.',
+        'Hot Cues Quadrant (1, 2, 3, 4): Store up to 4 instant trigger markings per song. Tap an empty pad to write, tap again to instantly warp to that spot. Press and hold (0.7s) to invoke a clean red wiping overlay to delete a cue, or right-click to clear.',
+        'Key Lock (MT): Activates professional Master Tempo pitch stabilization. Keeps vocal tracks in natural keys even at extreme speeds.',
+        'Slip Mode (SLIP Button): Keeps a virtual background playhead running silently during scratches or loops. On release, playback snaps seamlessly to this background spot.'
       ]
     },
     {
@@ -55,11 +56,11 @@ export default function OpManualReader() {
       content: 'The center console controls how individual signals blend together into the Master Output:',
       bullets: [
         'Gain Stages: Calibrate input volumes to normalize quiet uploads or hot recording volumes.',
-        'EQ Isolation Nodes: Real-time 3-band acoustic isolates. Kill high notes (Hi), warm frequencies (Mid), or bass beats (Low). Double-click/double-tap to instantly reset nodes back to flat (0dB).',
-        'Isolator Filter Sweeps: Center rotary dial sweeps Low-pass filters (LPF, turn left to roll off highs) and High-pass filters (HPF, turn right to extract low clutter).',
+        'EQ Isolation Nodes & Kills: Real-time 3-band acoustic isolates (Hi, Mid, Low). Double-click/double-tap to instantly reset nodes back to flat (0dB). Press the "K" (Kill) buttons next to each dial to instantly mute that frequency band completely.',
+        'Isolator Filter Sweeps: Center rotary dial sweeps Low-pass filters (LPF, turn left to muffle) and High-pass filters (HPF, turn right to thin).',
         'Line Faders (CH A & CH B): Controls separate volume channels before cross-fader stages.',
-        'Asymmetrical Crossfader: Smooth physical slider at the very base. Links and morphs the relative volumes of Deck A and Deck B across a single horizontal axis.',
-        'Touch Cohesion (Tablet Friendly): Complete conflict-free simultaneous touchscreen controls. Slide Channel A and B volumes or speed pitch controls in completely different directions at the same time with multiple fingers.'
+        '3-Stage Curve Selector: Adjust the Curve knob to cycle fader response: Linear (0.0-0.3) for smooth blending, Constant Power (0.3-0.7) for standard mixing, and Battle Cut (0.7-1.0) for scratch-cutting.',
+        'Touch Cohesion (Tablet Friendly): Complete conflict-free simultaneous touchscreen controls. Slide Channel A and B volumes or speed pitch controls in completely different directions at the same time.'
       ],
       tips: [
         'Double-click or double-tap any rotary EQ or volume knob to quickly snap it back to its neutral 0 or default position.'
