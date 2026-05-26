@@ -32,19 +32,38 @@ export class AudioEngine {
   keyLockA: boolean = false;
   keyLockB: boolean = false;
   
+  slipEnabled: { A: boolean, B: boolean } = { A: false, B: false };
   private playStartTime = { A: 0, B: 0 };
   private playOffset = { A: 0, B: 0 };
   private lastScratchTime = { A: 0, B: 0 };
   private loopStartTime = { A: 0, B: 0 };
   private loopStartPos = { A: 0, B: 0 };
   private loopEndPos = { A: 0, B: 0 };
+  private slipStartTime = { A: 0, B: 0 };
+  private slipStartPos = { A: 0, B: 0 };
   
   private recorder: Tone.Recorder = new Tone.Recorder();
+  private lastLoadedUrls = { A: '', B: '' };
 
   // Procedural synthesizer engines
   private synth: Tone.PolySynth | null = null;
   private delay: Tone.FeedbackDelay | null = null;
   private acidSynth: Tone.MonoSynth | null = null;
+  
+  // Persistent sampler & drum synths to prevent garbage collection
+  private kickSynth: Tone.MembraneSynth | null = null;
+  private snareSynth: Tone.NoiseSynth | null = null;
+  private clapSynth: Tone.NoiseSynth | null = null;
+  private hihatSynth: Tone.MetalSynth | null = null;
+  private noiseSynth: Tone.NoiseSynth | null = null;
+  private sirenOsc: Tone.Oscillator | null = null;
+  private sirenGain: Tone.Gain | null = null;
+  private subOsc: Tone.Oscillator | null = null;
+  private subGain: Tone.Gain | null = null;
+  private sweepNoise: Tone.Noise | null = null;
+  private sweepFilter: Tone.Filter | null = null;
+  private sweepGain: Tone.Gain | null = null;
+  private laserSynth: Tone.MonoSynth | null = null;
 
   constructor() {
     this.deckA = new Tone.Player();
@@ -358,6 +377,27 @@ export class AudioEngine {
   }
 
   async loadTrack(deck: 'A' | 'B', url: string) {
+    // Clean up the Tone.js global cache and revoke old Blob URL for the previous track on this deck
+    const prevUrl = this.lastLoadedUrls[deck];
+    if (prevUrl) {
+      try {
+        if (typeof (Tone as any).ToneAudioBuffer?.removeFromCache === 'function') {
+          (Tone as any).ToneAudioBuffer.removeFromCache(prevUrl);
+        } else if (typeof (Tone as any).Buffer?.removeFromCache === 'function') {
+          (Tone as any).Buffer.removeFromCache(prevUrl);
+        }
+      } catch (e) {
+        console.warn("Could not remove URL from Tone cache:", e);
+      }
+      
+      if (prevUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(prevUrl);
+        } catch (e) {}
+      }
+    }
+    this.lastLoadedUrls[deck] = url;
+
     // Completely dispose of the old Tone.Player to cancel any pending downloads or locks
     const oldPlayer = this.getDeck(deck);
     try {
@@ -496,12 +536,39 @@ export class AudioEngine {
       player.loop = false;
       const loopLen = this.loopEndPos[deck] - this.loopStartPos[deck];
       if (player.state === 'started' && loopLen > 0) {
-        const elapsed = (Tone.now() - this.loopStartTime[deck]) * player.playbackRate;
-        const offset = elapsed % loopLen;
-        const currentPos = this.loopStartPos[deck] + offset;
-        this.seek(deck, currentPos);
+        if (this.slipEnabled[deck]) {
+          // Slip Mode: Snap playhead to background running time since loop start
+          const elapsed = (Tone.now() - this.loopStartTime[deck]) * player.playbackRate;
+          const currentPos = (this.loopStartPos[deck] + elapsed) % player.buffer.duration;
+          this.seek(deck, currentPos);
+        } else {
+          // Standard Loop: Snap to relative offset inside loop boundaries
+          const elapsed = (Tone.now() - this.loopStartTime[deck]) * player.playbackRate;
+          const offset = elapsed % loopLen;
+          const currentPos = this.loopStartPos[deck] + offset;
+          this.seek(deck, currentPos);
+        }
       }
     }
+  }
+
+  setSlipMode(deck: 'A' | 'B', enabled: boolean) {
+    this.slipEnabled[deck] = enabled;
+  }
+
+  startSlip(deck: 'A' | 'B') {
+    this.slipStartTime[deck] = Tone.now();
+    this.slipStartPos[deck] = this.getPosition(deck);
+  }
+
+  resolveSlip(deck: 'A' | 'B') {
+    const player = this.getDeck(deck);
+    if (!player.buffer.loaded || player.buffer.duration === 0) return;
+    const startPos = this.slipStartPos[deck] || 0;
+    const startTime = this.slipStartTime[deck] || Tone.now();
+    const elapsed = (Tone.now() - startTime) * player.playbackRate;
+    const target = (startPos + elapsed) % player.buffer.duration;
+    this.seek(deck, target);
   }
 
   setGain(deck: 'A' | 'B', value: number) {
@@ -557,41 +624,21 @@ export class AudioEngine {
   }
 
   private updateCrossfader(value: number) {
-    // Battle curve logic: 0 = linear blend, 1 = instant on
-    let fadeVal = value;
-    if (this.crossfadeCurve > 0.8) {
-        // Hard cut
-        if (value < 0.45) fadeVal = 0;
-        else if (value > 0.55) fadeVal = 1;
-        else fadeVal = 0.5;
-    }
-
-    // Apply professional Equal Gain DJ crossfader curve to prevent split bleed
     let gainA = 1;
     let gainB = 1;
 
-    if (this.crossfadeCurve > 0.8) {
-      if (fadeVal === 0) {
-        gainA = 1;
-        gainB = 0;
-      } else if (fadeVal === 1) {
-        gainA = 0;
-        gainB = 1;
-      } else {
-        gainA = 1;
-        gainB = 1;
-      }
+    if (this.crossfadeCurve <= 0.3) {
+      // 1. Linear Crossfader Curve (Smooth constant sum, dip in center volume)
+      gainA = 1 - value;
+      gainB = value;
+    } else if (this.crossfadeCurve <= 0.7) {
+      // 2. Constant Power / Equal Gain Curve (Standard DJ curve, no dip in center volume)
+      gainA = Math.cos(value * Math.PI / 2);
+      gainB = Math.sin(value * Math.PI / 2);
     } else {
-      // Equal Gain / Constant Power blend
-      // If we are leaning to the left (<= 0.5), Deck A is 100%, Deck B fades linearly to 0
-      if (fadeVal <= 0.5) {
-        gainA = 1;
-        gainB = Math.max(0, Math.min(1, fadeVal * 2));
-      } else {
-        // If we are leaning to the right (> 0.5), Deck B is 100%, Deck A fades linearly to 0
-        gainB = 1;
-        gainA = Math.max(0, Math.min(1, (1 - fadeVal) * 2));
-      }
+      // 3. Scratch / Battle Cut Curve (Instant on volume transition)
+      gainA = value < 0.9 ? 1.0 : Math.max(0, Math.min(1, (1 - value) * 10));
+      gainB = value > 0.1 ? 1.0 : Math.max(0, Math.min(1, value * 10));
     }
 
     // Assign gain values safely through explicit rampTo
@@ -634,6 +681,12 @@ export class AudioEngine {
   }
 
   triggerSample(name: string) {
+    try {
+      if (Tone.context.state === 'suspended') {
+        Tone.context.resume();
+      }
+    } catch (_) {}
+
     if (name === 'trance_stab') {
       if (!this.synth) {
         this.delay = new Tone.FeedbackDelay("1/8n", 0.55).toDestination();
@@ -684,22 +737,20 @@ export class AudioEngine {
     }
 
     if (name === 'rave_siren') {
-      try {
-        const osc = new Tone.Oscillator("sawtooth");
+      if (!this.sirenOsc) {
         const filter = new Tone.Filter(1800, "lowpass").toDestination();
-        const gain = new Tone.Gain(0.12).toDestination();
-        osc.connect(filter);
-        filter.connect(gain);
-        
+        this.sirenGain = new Tone.Gain(0).connect(filter);
+        this.sirenOsc = new Tone.Oscillator("sawtooth").connect(this.sirenGain);
+        this.sirenOsc.start();
+      }
+      try {
         const now = Tone.now();
-        osc.frequency.setValueAtTime(260, now);
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
+        this.sirenOsc.frequency.setValueAtTime(260, now);
+        this.sirenOsc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
         
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.linearRampToValueAtTime(0, now + 1.4);
-        
-        osc.start(now);
-        osc.stop(now + 1.4);
+        this.sirenGain.gain.setValueAtTime(0, now);
+        this.sirenGain.gain.linearRampToValueAtTime(0.12, now + 0.1);
+        this.sirenGain.gain.linearRampToValueAtTime(0, now + 1.4);
       } catch (e) {
         console.warn(e);
       }
@@ -707,20 +758,19 @@ export class AudioEngine {
     }
 
     if (name === 'sub_drop') {
+      if (!this.subOsc) {
+        this.subGain = new Tone.Gain(0).toDestination();
+        this.subOsc = new Tone.Oscillator("sine").connect(this.subGain);
+        this.subOsc.start();
+      }
       try {
-        const osc = new Tone.Oscillator("sine");
-        const gain = new Tone.Gain(0.26).toDestination();
-        osc.connect(gain);
-        
         const now = Tone.now();
-        osc.frequency.setValueAtTime(100, now);
-        osc.frequency.exponentialRampToValueAtTime(32, now + 1.6);
+        this.subOsc.frequency.setValueAtTime(100, now);
+        this.subOsc.frequency.exponentialRampToValueAtTime(32, now + 1.6);
         
-        gain.gain.setValueAtTime(0.26, now);
-        gain.gain.linearRampToValueAtTime(0, now + 1.6);
-        
-        osc.start(now);
-        osc.stop(now + 1.6);
+        this.subGain.gain.setValueAtTime(0, now);
+        this.subGain.gain.linearRampToValueAtTime(0.26, now + 0.05);
+        this.subGain.gain.linearRampToValueAtTime(0, now + 1.6);
       } catch (e) {
         console.warn(e);
       }
@@ -728,26 +778,20 @@ export class AudioEngine {
     }
 
     if (name === 'noise_sweep') {
+      if (!this.sweepNoise) {
+        this.sweepFilter = new Tone.Filter({ type: "bandpass", Q: 4.5, frequency: 250 }).toDestination();
+        this.sweepGain = new Tone.Gain(0).connect(this.sweepFilter);
+        this.sweepNoise = new Tone.Noise("white").connect(this.sweepGain);
+        this.sweepNoise.start();
+      }
       try {
-        const noise = new Tone.Noise("white");
-        const filter = new Tone.Filter({
-          type: "bandpass",
-          Q: 4.5,
-          frequency: 250
-        }).toDestination();
-        const gain = new Tone.Gain(0.14).toDestination();
-        noise.connect(filter);
-        filter.connect(gain);
-        
         const now = Tone.now();
-        filter.frequency.setValueAtTime(250, now);
-        filter.frequency.exponentialRampToValueAtTime(7500, now + 1.5);
+        this.sweepFilter.frequency.setValueAtTime(250, now);
+        this.sweepFilter.frequency.exponentialRampToValueAtTime(7500, now + 1.5);
         
-        gain.gain.setValueAtTime(0.14, now);
-        gain.gain.linearRampToValueAtTime(0, now + 1.6);
-        
-        noise.start(now);
-        noise.stop(now + 1.6);
+        this.sweepGain.gain.setValueAtTime(0, now);
+        this.sweepGain.gain.linearRampToValueAtTime(0.14, now + 0.1);
+        this.sweepGain.gain.linearRampToValueAtTime(0, now + 1.6);
       } catch (e) {
         console.warn(e);
       }
@@ -763,7 +807,6 @@ export class AudioEngine {
 
       if (isLoaded) {
         try {
-          // Randomize pitch slightly for more natural repetition
           if (name === 'scratch') {
             player.playbackRate = 0.8 + Math.random() * 0.4;
           } else {
@@ -779,145 +822,132 @@ export class AudioEngine {
 
     // High-fidelity fallback synthesizer drum-kit if audio resources failed to load/CORS blocked
     if (name === 'kick') {
+      if (!this.kickSynth) {
+        this.kickSynth = new Tone.MembraneSynth({
+          envelope: { attack: 0.001, decay: 0.18, sustain: 0, release: 0.15 }
+        }).toDestination();
+      }
       try {
-        const osc = new Tone.Oscillator("sine");
-        const gain = new Tone.Gain(0.85).toDestination();
-        osc.connect(gain);
-        const now = Tone.now();
-        osc.frequency.setValueAtTime(145, now);
-        osc.frequency.exponentialRampToValueAtTime(38, now + 0.12);
-        gain.gain.setValueAtTime(0.85, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.15);
-        osc.start(now);
-        osc.stop(now + 0.15);
-      } catch (e) { console.warn(e); }
+        this.kickSynth.triggerAttackRelease("C1", "8n");
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'snare') {
+      if (!this.snareSynth) {
+        this.snareSynth = new Tone.NoiseSynth({
+          noise: { type: "pink" },
+          envelope: { attack: 0.001, decay: 0.15, sustain: 0 }
+        }).toDestination();
+      }
       try {
-        const osc = new Tone.Oscillator("triangle");
-        const noise = new Tone.Noise("white");
-        const filter = new Tone.Filter(1800, "highpass").toDestination();
-        const gainNoise = new Tone.Gain(0.18).connect(filter);
-        const gainOsc = new Tone.Gain(0.35).toDestination();
-        noise.connect(gainNoise);
-        osc.connect(gainOsc);
-        const now = Tone.now();
-        osc.frequency.setValueAtTime(175, now);
-        gainOsc.gain.setValueAtTime(0.35, now);
-        gainOsc.gain.linearRampToValueAtTime(0, now + 0.11);
-        gainNoise.gain.setValueAtTime(0.18, now);
-        gainNoise.gain.linearRampToValueAtTime(0, now + 0.14);
-        osc.start(now);
-        noise.start(now);
-        osc.stop(now + 0.14);
-        noise.stop(now + 0.14);
-      } catch (e) { console.warn(e); }
+        this.snareSynth.triggerAttackRelease("16n");
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'clap') {
+      if (!this.clapSynth) {
+        this.clapSynth = new Tone.NoiseSynth({
+          noise: { type: "white" },
+          envelope: { attack: 0.001, decay: 0.08, sustain: 0 }
+        }).toDestination();
+      }
       try {
-        const noise = new Tone.Noise("pink");
-        const filter = new Tone.Filter(1400, "bandpass").toDestination();
-        const gain = new Tone.Gain(0.28).connect(filter);
-        noise.connect(gain);
         const now = Tone.now();
-        gain.gain.setValueAtTime(0.28, now);
-        gain.gain.linearRampToValueAtTime(0.01, now + 0.02);
-        gain.gain.setValueAtTime(0.28, now + 0.024);
-        gain.gain.linearRampToValueAtTime(0.01, now + 0.044);
-        gain.gain.setValueAtTime(0.28, now + 0.048);
-        gain.gain.linearRampToValueAtTime(0, now + 0.13);
-        noise.start(now);
-        noise.stop(now + 0.14);
-      } catch (e) { console.warn(e); }
+        this.clapSynth.triggerAttack(now);
+        this.clapSynth.triggerAttack(now + 0.015);
+        this.clapSynth.triggerAttack(now + 0.03);
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'hihat') {
+      if (!this.hihatSynth) {
+        this.hihatSynth = new Tone.MetalSynth({
+          envelope: { attack: 0.001, decay: 0.05, release: 0.05 }
+        }).toDestination();
+      }
       try {
-        const noise = new Tone.Noise("white");
-        const filter = new Tone.Filter(7500, "highpass").toDestination();
-        const gain = new Tone.Gain(0.16).connect(filter);
-        noise.connect(gain);
-        const now = Tone.now();
-        gain.gain.setValueAtTime(0.16, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.045);
-        noise.start(now);
-        noise.stop(now + 0.05);
-      } catch (e) { console.warn(e); }
+        this.hihatSynth.triggerAttackRelease("16n");
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'scratch') {
+      if (!this.noiseSynth) {
+        this.noiseSynth = new Tone.NoiseSynth({
+          noise: { type: "pink" },
+          envelope: { attack: 0.02, decay: 0.12, sustain: 0 }
+        }).toDestination();
+      }
       try {
-        const noise = new Tone.Noise("pink");
-        const filter = new Tone.Filter(950, "bandpass").toDestination();
-        const gain = new Tone.Gain(0.32).connect(filter);
-        noise.connect(gain);
-        const now = Tone.now();
-        filter.frequency.setValueAtTime(350, now);
-        filter.frequency.linearRampToValueAtTime(1300, now + 0.075);
-        filter.frequency.linearRampToValueAtTime(550, now + 0.14);
-        gain.gain.setValueAtTime(0.32, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.14);
-        noise.start(now);
-        noise.stop(now + 0.15);
-      } catch (e) { console.warn(e); }
+        this.noiseSynth.triggerAttackRelease("16n");
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'fx_1') {
+      if (!this.laserSynth) {
+        this.laserSynth = new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.005, decay: 0.3, sustain: 0.2, release: 0.3 }
+        }).toDestination();
+      }
       try {
-        const osc = new Tone.Oscillator("sawtooth");
-        const filter = new Tone.Filter(1100, "lowpass").toDestination();
-        const gain = new Tone.Gain(0.12).connect(filter);
-        osc.connect(gain);
         const now = Tone.now();
-        osc.frequency.setValueAtTime(140, now);
-        osc.frequency.exponentialRampToValueAtTime(1100, now + 1.1);
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.linearRampToValueAtTime(0, now + 1.1);
-        osc.start(now);
-        osc.stop(now + 1.1);
-      } catch (e) { console.warn(e); }
+        this.laserSynth.triggerAttackRelease("C3", "1.1");
+        this.laserSynth.frequency.setValueAtTime(140, now);
+        this.laserSynth.frequency.exponentialRampToValueAtTime(1100, now + 1.1);
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'fx_2') {
+      if (!this.laserSynth) {
+        this.laserSynth = new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.005, decay: 0.3, sustain: 0.2, release: 0.3 }
+        }).toDestination();
+      }
       try {
-        const osc = new Tone.Oscillator("sawtooth");
-        const filter = new Tone.Filter({ Q: 3.5, type: "bandpass", frequency: 750 }).toDestination();
-        const gain = new Tone.Gain(0.2).connect(filter);
-        osc.connect(gain);
         const now = Tone.now();
-        osc.frequency.setValueAtTime(105, now);
-        osc.frequency.linearRampToValueAtTime(210, now + 0.14);
-        filter.frequency.setValueAtTime(750, now);
-        filter.frequency.exponentialRampToValueAtTime(1700, now + 0.14);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.18);
-        osc.start(now);
-        osc.stop(now + 0.18);
-      } catch (e) { console.warn(e); }
+        this.laserSynth.triggerAttackRelease("A3", "8n");
+        this.laserSynth.frequency.setValueAtTime(105, now);
+        this.laserSynth.frequency.linearRampToValueAtTime(210, now + 0.14);
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
 
     if (name === 'fx_3') {
+      if (!this.laserSynth) {
+        this.laserSynth = new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.005, decay: 0.3, sustain: 0.2, release: 0.3 }
+        }).toDestination();
+      }
       try {
-        const osc = new Tone.Oscillator("sawtooth");
-        const gain = new Tone.Gain(0.16).toDestination();
-        osc.connect(gain);
         const now = Tone.now();
-        osc.frequency.setValueAtTime(2400, now);
-        osc.frequency.exponentialRampToValueAtTime(140, now + 0.32);
-        gain.gain.setValueAtTime(0.16, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.32);
-        osc.start(now);
-        osc.stop(now + 0.32);
-      } catch (e) { console.warn(e); }
+        this.laserSynth.triggerAttackRelease("C5", "4n");
+        this.laserSynth.frequency.setValueAtTime(2400, now);
+        this.laserSynth.frequency.exponentialRampToValueAtTime(140, now + 0.32);
+      } catch (e) {
+        console.warn(e);
+      }
       return;
     }
   }

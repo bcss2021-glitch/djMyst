@@ -20,14 +20,17 @@ interface JogWheelProps {
     playbackRate: number;
     progress: number;
     rotation: number;
+    mode?: 'VINYL' | 'CDJ';
     onPitchBend?: (bend: number) => void;
     onPadTrigger?: (sample: string) => void;
     onScratchDrag?: (sec: number) => void;
     onScratchStart?: () => void;
     onScratchEnd?: () => void;
+    baseBpm: number;
+    platterStyle: 'VINYL' | 'CDJ' | 'NEON';
 }
 
-function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, onPitchBend, onPadTrigger, onScratchDrag, onScratchStart, onScratchEnd }: JogWheelProps & { onClick?: () => void }) {
+function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, onPitchBend, onPadTrigger, onScratchDrag, onScratchStart, onScratchEnd, mode = 'VINYL', baseBpm, platterStyle }: JogWheelProps & { onClick?: () => void }) {
   const [bend, setBend] = useState(1);
   const [isScratching, setIsScratching] = useState(false);
   const [rotationAngle, setRotationAngle] = useState(0); 
@@ -58,11 +61,13 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
     };
   }, [isPlaying, isGrabbing, playbackRate]);
 
+  const isCDJActive = mode === 'CDJ' && isPlaying;
+
   const handleStart = (clientX: number, clientY: number) => {
     if (!wheelRef.current || isLoading) return;
     setIsGrabbing(true);
     
-    if (onScratchStart) {
+    if (!isCDJActive && onScratchStart) {
       onScratchStart();
     }
 
@@ -90,17 +95,25 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
     if (Math.abs(angleDiff) > 0.1) {
       setRotationAngle(prev => (prev + angleDiff + 360) % 360);
       
-      // Calculate playhead seek delta: 360 deg = 2 seconds of song
-      const secDelta = angleDiff * 0.006;
-      if (onScratchDrag) {
-        onScratchDrag(secDelta);
-      }
-      
-      const velocity = Math.abs(angleDiff) * 35;
-      if (velocity > 350 && !isScratching) {
-        audioEngine.scratchWheel(velocity);
-        setIsScratching(true);
-        setTimeout(() => setIsScratching(false), 100);
+      if (isCDJActive) {
+        // CDJ Pitch Bend Mode: speed up or slow down
+        const bendAmt = 1 + (angleDiff * 0.012);
+        const clampedBend = Math.max(0.75, Math.min(1.25, bendAmt));
+        setBend(clampedBend);
+        onPitchBend?.(clampedBend);
+      } else {
+        // Vinyl Mode or paused cueing: standard scratch/seek
+        const secDelta = angleDiff * 0.006;
+        if (onScratchDrag) {
+          onScratchDrag(secDelta);
+        }
+        
+        const velocity = Math.abs(angleDiff) * 35;
+        if (velocity > 350 && !isScratching) {
+          audioEngine.scratchWheel(velocity);
+          setIsScratching(true);
+          setTimeout(() => setIsScratching(false), 100);
+        }
       }
       
       lastAngleRef.current = currentAngle;
@@ -112,13 +125,16 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
     setIsGrabbing(false);
     lastAngleRef.current = null;
     
-    if (onScratchEnd) {
-      onScratchEnd();
-    }
-
+    // Always reset pitch bend values on release to prevent stuck speeds
     setBend(1);
     onPitchBend?.(1);
-    setIsScratching(false);
+
+    if (!isCDJActive) {
+      if (onScratchEnd) {
+        onScratchEnd();
+      }
+      setIsScratching(false);
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -199,13 +215,38 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
           : 'cursor-grab hover:border-zinc-800'
       }`}
     >
-      {/* Vinyl record shiny grooves */}
-      <div 
-        className="absolute inset-0 rounded-full opacity-40 pointer-events-none" 
-        style={{ 
-          background: 'repeating-radial-gradient(circle, #010101, #010101 2px, #18181e 3px, #010101 4px)' 
-        }} 
-      />
+      {/* 1. VINYL Grooves */}
+      {platterStyle === 'VINYL' && (
+        <div 
+          className="absolute inset-0 rounded-full opacity-40 pointer-events-none" 
+          style={{ 
+            background: 'repeating-radial-gradient(circle, #010101, #010101 2px, #18181e 3px, #010101 4px)' 
+          }} 
+        />
+      )}
+
+      {/* 2. CDJ Strobe Rings */}
+      {platterStyle === 'CDJ' && (
+        <>
+          <div className="absolute inset-2 rounded-full border-4 border-dashed border-zinc-800 opacity-60 pointer-events-none" />
+          <div className="absolute inset-4 rounded-full border-2 border-dashed border-zinc-700 opacity-40 pointer-events-none" />
+          <div className="absolute inset-6 rounded-full border border-dashed border-zinc-600 pointer-events-none opacity-20" />
+        </>
+      )}
+
+      {/* 3. NEON Wave Rings */}
+      {platterStyle === 'NEON' && (
+        <>
+          <div className={`absolute inset-1 rounded-full border border-double pointer-events-none ${
+            id === 'A' 
+              ? 'border-blue-500/35 shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
+              : 'border-purple-500/35 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+          }`} />
+          <div className={`absolute inset-5 rounded-full border border-dotted pointer-events-none animate-[spin_12s_linear_infinite] ${
+            id === 'A' ? 'border-cyan-500/40' : 'border-pink-500/40'
+          }`} />
+        </>
+      )}
       
       {/* Ambient lighting shine highlights */}
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-transparent pointer-events-none" />
@@ -223,13 +264,49 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
           </div>
         )}
 
-        {/* Traditional White Platter Marker (Strobe dots / stripe) */}
-        <div className={`absolute top-0 w-1.5 h-6 shadow-[0_0_8px_currentColor] rounded-b-full ${
-          id === 'A' ? 'bg-blue-400 text-blue-500' : 'bg-purple-400 text-purple-500'
-        }`} />
-        <div className="absolute bottom-0 w-1 h-3 bg-white/10 rounded-t-full" />
-        <div className="absolute left-0 w-3 h-1 bg-white/10 rounded-r-full" />
-        <div className="absolute right-0 w-3 h-1 bg-white/10 rounded-l-full" />
+        {/* Style-specific markers inside the rotating chassis */}
+        {platterStyle === 'CDJ' ? (
+          <>
+            {/* CDJ Strobe Dots along the outer edge of rotating chassis */}
+            {[...Array(24)].map((_, i) => (
+              <div 
+                key={i}
+                className="absolute w-1 h-1 bg-white/20 rounded-full"
+                style={{
+                  transform: `rotate(${i * 15}deg) translateY(-76px)`
+                }}
+              />
+            ))}
+            {/* CDJ Marker Stripe */}
+            <div className={`absolute top-0 w-2.5 h-6 shadow-[0_0_10px_currentColor] ${
+              id === 'A' ? 'bg-blue-400 text-blue-500' : 'bg-purple-400 text-purple-500'
+            }`} />
+          </>
+        ) : platterStyle === 'NEON' ? (
+          <>
+            {/* NEON Laser Lines rotating */}
+            <div className={`absolute w-full h-[1px] ${
+              id === 'A' ? 'bg-gradient-to-r from-blue-500/10 via-blue-500 to-blue-500/10' : 'bg-gradient-to-r from-purple-500/10 via-purple-500 to-purple-500/10'
+            }`} />
+            <div className={`absolute w-[1px] h-full ${
+              id === 'A' ? 'bg-gradient-to-b from-blue-500/10 via-blue-500 to-blue-500/10' : 'bg-gradient-to-b from-purple-500/10 via-purple-500 to-purple-500/10'
+            }`} />
+            {/* Neon Marker */}
+            <div className={`absolute top-0 w-3 h-3 rounded-full shadow-[0_0_12px_currentColor] ${
+              id === 'A' ? 'bg-cyan-400 text-cyan-400' : 'bg-pink-400 text-pink-400'
+            }`} />
+          </>
+        ) : (
+          <>
+            {/* Traditional Vinyl Marker Stripe */}
+            <div className={`absolute top-0 w-1.5 h-6 shadow-[0_0_8px_currentColor] rounded-b-full ${
+              id === 'A' ? 'bg-blue-400 text-blue-500' : 'bg-purple-400 text-purple-500'
+            }`} />
+            <div className="absolute bottom-0 w-1 h-3 bg-white/10 rounded-t-full" />
+            <div className="absolute left-0 w-3 h-1 bg-white/10 rounded-r-full" />
+            <div className="absolute right-0 w-3 h-1 bg-white/10 rounded-l-full" />
+          </>
+        )}
       </div>
 
       {/* Center Metal Cap Display */}
@@ -248,9 +325,11 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
         
         {isGrabbing && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#101014] rounded-full z-20">
-             <span className={`text-[9px] font-black uppercase tracking-widest animate-pulse ${
+             <span className={`text-[9.5px] font-black uppercase tracking-widest animate-pulse ${
                id === 'A' ? 'text-blue-400 drop-shadow-[0_0_4px_rgba(59,130,246,0.6)]' : 'text-purple-400 drop-shadow-[0_0_4px_rgba(168,85,247,0.6)]'
-             }`}>TOUCH</span>
+             }`}>
+               {isCDJActive ? (bend !== 1 ? 'NUDGE' : 'TOUCH') : (isScratching ? 'SCRATCH' : 'HOLD')}
+             </span>
           </div>
         )}
 
@@ -259,7 +338,7 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
             ? 'text-zinc-500' 
             : (id === 'A' ? 'text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.3)]' : 'text-purple-400 drop-shadow-[0_0_6px_rgba(168,85,247,0.3)]')
         }`}>
-          {(128 * playbackRate * bend).toFixed(1)}
+          {(baseBpm * playbackRate * bend).toFixed(1)}
         </div>
         
         <div className="text-[7px] text-zinc-500/80 uppercase font-bold tracking-widest mt-1">
@@ -323,6 +402,10 @@ interface DeckProps {
   onEject?: () => void;
   onSkip?: (seconds: number) => void;
   isSynced?: boolean;
+  baseBpm?: number;
+  onBpmTap?: () => void;
+  isSlipActive?: boolean;
+  onSlipToggle?: () => void;
 }
 
 interface InteractiveSliderProps {
@@ -754,10 +837,13 @@ export default function Deck({
   loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1,
   onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
   onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer, isSynced = false,
-  onPlayerPlay, onPlayerPause, onEject, onSkip
+  onPlayerPlay, onPlayerPause, onEject, onSkip,
+  baseBpm = 128, onBpmTap, isSlipActive = false, onSlipToggle
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [jogMode, setJogMode] = useState<'VINYL' | 'CDJ'>('VINYL');
+  const [platterStyle, setPlatterStyle] = useState<'VINYL' | 'CDJ' | 'NEON'>('VINYL');
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1167,39 +1253,109 @@ export default function Deck({
 
          <div className="flex flex-col items-end">
             <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20 font-sans">SPEED / PITCH</span>
-            <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center tabular-nums">
-               {((playbackRate - 1) * 100).toFixed(1)}%
+            <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center tabular-nums flex flex-col items-end gap-0.5 min-w-[70px]">
+               <span>{((playbackRate - 1) * 100).toFixed(1)}%</span>
+               <span className="text-[7.5px] text-zinc-500 font-normal">BASE: {baseBpm.toFixed(0)} BPM</span>
             </div>
+            <button
+              onClick={onBpmTap}
+              className="mt-1 px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[7px] font-black text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
+              title="Tap to the beat to set the BPM"
+            >
+              TAP BPM
+            </button>
          </div>
       </div>
 
       {/* Platter Area */}
       <div className="flex flex-col items-center gap-4 relative w-full px-4">
-        <div className="relative group">
-            <JogWheel 
-                id={id}
-                playbackRate={playbackRate}
-                isLoading={isLoading}
-                isPlaying={isPlaying} 
-                progress={0} 
-                rotation={0} 
-                onPitchBend={onPitchBend}
-                onPadTrigger={onPadTrigger}
-                onScratchDrag={onScratchDrag}
-                onScratchStart={onScratchStart}
-                onScratchEnd={onScratchEnd}
-                onClick={() => onPadTrigger('scratch')} 
-            />
-            
-            {/* Toggle Button */}
-            <button 
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`absolute ${id === 'A' ? '-right-8' : '-left-8'} top-1/2 -translate-y-1/2 p-2 bg-brand-panel border border-white/10 text-white/40 hover:text-white transition-all z-20 shadow-2xl rounded-full tactile-button`}
-                title={showAdvanced ? "Back to Deck" : "Show FX"}
-            >
-                {showAdvanced ? (id === 'A' ? <ChevronLeft size={12} /> : <ChevronRight size={12} />) : (id === 'A' ? <ChevronRight size={12} /> : <ChevronLeft size={12} />)}
-            </button>
-        </div>
+          <div className="relative group flex flex-col items-center">
+              <JogWheel 
+                  id={id}
+                  playbackRate={playbackRate}
+                  isLoading={isLoading}
+                  isPlaying={isPlaying} 
+                  progress={0} 
+                  rotation={0} 
+                  onPitchBend={onPitchBend}
+                  onPadTrigger={onPadTrigger}
+                  onScratchDrag={onScratchDrag}
+                  onScratchStart={onScratchStart}
+                  onScratchEnd={onScratchEnd}
+                  onClick={() => onPadTrigger('scratch')}
+                  mode={jogMode}
+                  baseBpm={baseBpm}
+                  platterStyle={platterStyle}
+              />
+              
+              {/* Toggle Button */}
+              <button 
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className={`absolute ${id === 'A' ? '-right-8' : '-left-8'} top-1/2 -translate-y-1/2 p-2 bg-brand-panel border border-white/10 text-white/40 hover:text-white transition-all z-20 shadow-2xl rounded-full tactile-button`}
+                  title={showAdvanced ? "Back to Deck" : "Show FX"}
+              >
+                  {showAdvanced ? (id === 'A' ? <ChevronLeft size={12} /> : <ChevronRight size={12} />) : (id === 'A' ? <ChevronRight size={12} /> : <ChevronLeft size={12} />)}
+              </button>
+          </div>
+
+          {/* Grouped Platter & Playback Mode Controls */}
+          <div className="flex flex-col items-center gap-2 z-10 w-full">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {/* Jog Mode Selector */}
+              <div className="flex items-center gap-1 bg-black/50 p-0.5 rounded-full border border-white/5 text-[8.5px] font-mono font-bold">
+                <button
+                  onClick={() => setJogMode('VINYL')}
+                  className={`px-2 py-0.5 rounded-full transition-all uppercase select-none cursor-pointer ${
+                    jogMode === 'VINYL' 
+                      ? 'bg-amber-500 text-black shadow-[0_2px_8px_rgba(245,158,11,0.3)] font-black' 
+                      : 'text-white/40 hover:text-white/60'
+                  }`}
+                >
+                  VINYL
+                </button>
+                <button
+                  onClick={() => setJogMode('CDJ')}
+                  className={`px-2 py-0.5 rounded-full transition-all uppercase select-none cursor-pointer ${
+                    jogMode === 'CDJ' 
+                      ? (id === 'A' ? 'bg-blue-500 text-white shadow-[0_2px_8px_rgba(59,130,246,0.3)] font-black' : 'bg-purple-500 text-white shadow-[0_2px_8px_rgba(168,85,247,0.3)] font-black')
+                      : 'text-white/40 hover:text-white/60'
+                  }`}
+                >
+                  CDJ
+                </button>
+              </div>
+
+              {/* Slip Mode Toggle */}
+              <button
+                onClick={onSlipToggle}
+                className={`px-2.5 py-1 rounded-full border text-[8px] font-mono font-black tracking-wider uppercase transition-all select-none cursor-pointer ${
+                  isSlipActive 
+                    ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.5)]' 
+                    : 'bg-black/50 border-white/5 text-white/40 hover:text-white hover:border-white/10'
+                }`}
+              >
+                SLIP
+              </button>
+            </div>
+
+            {/* Platter Visual Style Cycle Selector */}
+            <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded-full border border-white/5 text-[8px] font-mono font-bold">
+              <span className="text-[7.5px] text-zinc-500 px-1.5 uppercase font-sans tracking-wider">STYLE:</span>
+              {(['VINYL', 'CDJ', 'NEON'] as const).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => setPlatterStyle(style)}
+                  className={`px-2.5 py-0.5 rounded-full transition-all uppercase select-none cursor-pointer ${
+                    platterStyle === style 
+                      ? 'bg-zinc-700 text-white font-black' 
+                      : 'text-white/40 hover:text-white/60'
+                  }`}
+                >
+                  {style}
+                </button>
+              ))}
+            </div>
+          </div>
         
         <div className="grid grid-cols-2 gap-4 w-full">
             {/* Loops & Cues Left Column */}
@@ -1504,42 +1660,42 @@ export default function Deck({
                      <div className="grid grid-cols-4 gap-1.5">
                         <button 
                           onClick={() => onPadTrigger('kick')}
-                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                          className={`h-9 border border-rose-800/40 bg-rose-950/20 text-rose-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-rose-900/10 shadow-[0_0_10px_rgba(244,63,94,0.05)]`}
                         >
                            <span>KICK</span>
                            <span className="text-[5.5px] opacity-30 mt-0.5">DRUM</span>
                         </button>
                         <button 
                           onClick={() => onPadTrigger('snare')}
-                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                          className={`h-9 border border-amber-800/40 bg-amber-950/20 text-amber-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-amber-900/10 shadow-[0_0_10px_rgba(245,158,11,0.05)]`}
                         >
                            <span>SNARE</span>
                            <span className="text-[5.5px] opacity-30 mt-0.5">DRUM</span>
                         </button>
                         <button 
                           onClick={() => onPadTrigger('clap')}
-                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                          className={`h-9 border border-emerald-800/40 bg-emerald-950/20 text-emerald-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-emerald-900/10 shadow-[0_0_10px_rgba(16,185,129,0.05)]`}
                         >
                            <span>CLAP</span>
                            <span className="text-[5.5px] opacity-30 mt-0.5">SYNTH</span>
                         </button>
                         <button 
                           onClick={() => onPadTrigger('hihat')}
-                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                          className={`h-9 border border-cyan-800/40 bg-cyan-950/20 text-cyan-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-cyan-900/10 shadow-[0_0_10px_rgba(6,182,212,0.05)]`}
                         >
                            <span>HI-HAT</span>
                            <span className="text-[5.5px] opacity-30 mt-0.5">CYMBAL</span>
                         </button>
                         <button 
                           onClick={() => onPadTrigger('scratch')}
-                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                          className={`h-9 border border-indigo-800/40 bg-indigo-950/20 text-indigo-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-indigo-900/10 shadow-[0_0_10px_rgba(99,102,241,0.05)]`}
                         >
                            <span>SCRATCH</span>
                            <span className="text-[5.5px] opacity-30 mt-0.5">VINYL</span>
                         </button>
                         <button 
                           onClick={() => onPadTrigger('fx_1')}
-                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                          className={`h-9 border border-fuchsia-800/40 bg-fuchsia-950/20 text-fuchsia-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-fuchsia-900/10 shadow-[0_0_10px_rgba(217,70,239,0.05)]`}
                         >
                            <span>RISER</span>
                            <span className="text-[5.5px] opacity-30 mt-0.5">IMPACT</span>

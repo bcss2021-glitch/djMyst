@@ -70,6 +70,7 @@ export default function App() {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeLoadingUrlRef = useRef<{ A: string | null, B: string | null }>({ A: null, B: null });
   const wasPlayingBeforeScratch = useRef<Record<'A' | 'B', boolean>>({ A: false, B: false });
+  const tapTimestamps = useRef<{ A: number[], B: number[] }>({ A: [], B: [] });
   
   const [playlist, setPlaylist] = useState<SavedTrack[]>(() => {
     try {
@@ -164,6 +165,12 @@ export default function App() {
     A: { in: null as number | null, active: false },
     B: { in: null as number | null, active: false },
   });
+  const [eqKillState, setEqKillState] = useState({
+    A: { low: false, mid: false, high: false },
+    B: { low: false, mid: false, high: false },
+  });
+  const [deckBaseBpm, setDeckBaseBpm] = useState({ A: 128, B: 128 });
+  const [slipModeState, setSlipModeState] = useState({ A: false, B: false });
   const [history, setHistory] = useState<SavedTrack[]>(() => {
     try {
       const saved = localStorage.getItem('dj_history');
@@ -478,11 +485,62 @@ export default function App() {
   };
 
   const handleEqChange = (deck: 'A' | 'B', band: 'low' | 'mid' | 'high', val: number) => {
-    audioEngine.setEQ(deck, band, val);
     setEqState(prev => ({
       ...prev,
       [deck]: { ...prev[deck], [band]: val }
     }));
+    // Only set audio engine EQ if not killed
+    if (!eqKillState[deck][band]) {
+      audioEngine.setEQ(deck, band, val);
+    }
+  };
+
+  const handleEqKillToggle = (deck: 'A' | 'B', band: 'low' | 'mid' | 'high') => {
+    setEqKillState(prev => {
+      const nextKill = !prev[deck][band];
+      const targetVal = nextKill ? -40 : eqState[deck][band];
+      audioEngine.setEQ(deck, band, targetVal);
+      return {
+        ...prev,
+        [deck]: { ...prev[deck], [band]: nextKill }
+      };
+    });
+  };
+
+  const handleBpmTap = (deck: 'A' | 'B') => {
+    const now = Date.now();
+    const timestamps = tapTimestamps.current[deck];
+    
+    // Reset tap list if more than 2 seconds since last tap
+    if (timestamps.length > 0 && now - timestamps[timestamps.length - 1] > 2000) {
+      timestamps.length = 0;
+    }
+    
+    timestamps.push(now);
+    
+    if (timestamps.length >= 2) {
+      const intervals = [];
+      for (let i = 1; i < timestamps.length; i++) {
+        intervals.push(timestamps[i] - timestamps[i - 1]);
+      }
+      const avgInterval = intervals.reduce((sum, v) => sum + v, 0) / intervals.length;
+      const bpm = 60000 / avgInterval;
+      setDeckBaseBpm(prev => ({
+        ...prev,
+        [deck]: Math.round(bpm * 10) / 10
+      }));
+    } else {
+      setDeckBaseBpm(prev => ({
+        ...prev,
+        [deck]: 128
+      }));
+    }
+  };
+
+  const handleSlipToggle = (deck: 'A' | 'B') => {
+    const nextSlip = !slipModeState[deck];
+    setSlipModeState(prev => ({ ...prev, [deck]: nextSlip }));
+    audioEngine.setSlipMode(deck, nextSlip);
   };
 
   const handleGainChange = (deck: 'A' | 'B', val: number) => {
@@ -580,21 +638,20 @@ export default function App() {
     const deckGain = gainState[deck];
     
     let cfFactor = 1;
-    let fadeVal = crossfade;
+    const fadeVal = crossfade;
     
-    if (xfaderCurve > 0.8) {
-      // Hard cut / Battle curve logic
-      if (deck === 'A') {
-        cfFactor = fadeVal >= 0.99 ? 0 : 1;
-      } else {
-        cfFactor = fadeVal <= 0.01 ? 0 : 1;
-      }
+    if (xfaderCurve <= 0.3) {
+      // 1. Linear Crossfader Curve
+      cfFactor = deck === 'A' ? (1 - fadeVal) : fadeVal;
+    } else if (xfaderCurve <= 0.7) {
+      // 2. Constant Power / Equal Gain Curve
+      cfFactor = deck === 'A' ? Math.cos(fadeVal * Math.PI / 2) : Math.sin(fadeVal * Math.PI / 2);
     } else {
-      // Equal Gain / Constant Power blend
+      // 3. Scratch / Battle Cut Curve
       if (deck === 'A') {
-        cfFactor = fadeVal <= 0.5 ? 1 : Math.max(0, Math.min(1, (1 - fadeVal) * 2));
+        cfFactor = fadeVal < 0.9 ? 1.0 : Math.max(0, Math.min(1, (1 - fadeVal) * 10));
       } else {
-        cfFactor = fadeVal >= 0.5 ? 1 : Math.max(0, Math.min(1, fadeVal * 2));
+        cfFactor = fadeVal > 0.1 ? 1.0 : Math.max(0, Math.min(1, fadeVal * 10));
       }
     }
     
@@ -648,6 +705,12 @@ export default function App() {
     audioEngine.setCrossfaderCurve(0.5);
     setCrossfade(0.5);
     setXfaderCurve(0.5);
+
+    // 6. Reset EQ Kills
+    setEqKillState({
+      A: { low: false, mid: false, high: false },
+      B: { low: false, mid: false, high: false },
+    });
   };
 
   const handleRewind = (deck: 'A' | 'B') => {
@@ -726,6 +789,9 @@ export default function App() {
     try {
       wasPlayingBeforeScratch.current[deck] = playingState[deck];
       if (playingState[deck]) {
+        if (slipModeState[deck]) {
+          audioEngine.startSlip(deck);
+        }
         audioEngine.setPlaybackState(deck, false);
       }
     } catch (e) {
@@ -740,6 +806,9 @@ export default function App() {
       audioEngine.endScratch(deck, reverseStates[deck]);
       
       if (wasPlayingBeforeScratch.current[deck]) {
+        if (slipModeState[deck]) {
+          audioEngine.resolveSlip(deck);
+        }
         audioEngine.setPlaybackState(deck, true);
       } else {
         audioEngine.setPlaybackState(deck, false);
@@ -1216,7 +1285,10 @@ export default function App() {
     e.target.value = '';
   };
 
-  const triggerSample = (name: string) => {
+  const triggerSample = async (name: string) => {
+    if (!isStarted) {
+      await startAudio();
+    }
     audioEngine.triggerSample(name);
   };
 
@@ -1486,6 +1558,10 @@ export default function App() {
                   onScratchEnd={() => handleScratchEnd('A')}
                   onEject={() => handleEjectDeck('A')}
                   onSkip={(sec) => handleSkip('A', sec)}
+                  baseBpm={deckBaseBpm.A}
+                  onBpmTap={() => handleBpmTap('A')}
+                  isSlipActive={slipModeState.A}
+                  onSlipToggle={() => handleSlipToggle('A')}
                 />
           </div>
 
@@ -1495,6 +1571,9 @@ export default function App() {
               eqA={eqState.A}
               eqB={eqState.B}
               onEqChange={handleEqChange}
+              eqKillA={eqKillState.A}
+              eqKillB={eqKillState.B}
+              onEqKillToggle={handleEqKillToggle}
               filterA={filterState.A}
               filterB={filterState.B}
               onFilterChange={handleFilterChange}
@@ -1561,6 +1640,10 @@ export default function App() {
                 onScratchEnd={() => handleScratchEnd('B')}
                 onEject={() => handleEjectDeck('B')}
                 onSkip={(sec) => handleSkip('B', sec)}
+                baseBpm={deckBaseBpm.B}
+                onBpmTap={() => handleBpmTap('B')}
+                isSlipActive={slipModeState.B}
+                onSlipToggle={() => handleSlipToggle('B')}
               />
           </div>
         </div>

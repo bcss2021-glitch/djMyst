@@ -7,6 +7,9 @@ interface MixerProps {
   eqA: { low: number; mid: number; high: number };
   eqB: { low: number; mid: number; high: number };
   onEqChange: (deck: 'A' | 'B', band: 'low' | 'mid' | 'high', val: number) => void;
+  eqKillA: { low: boolean; mid: boolean; high: boolean };
+  eqKillB: { low: boolean; mid: boolean; high: boolean };
+  onEqKillToggle: (deck: 'A' | 'B', band: 'low' | 'mid' | 'high') => void;
   filterA: number;
   filterB: number;
   onFilterChange: (deck: 'A' | 'B', val: number) => void;
@@ -23,6 +26,7 @@ interface MixerProps {
 
 export default function Mixer({ 
   eqA, eqB, onEqChange, 
+  eqKillA, eqKillB, onEqKillToggle,
   crossfade, onCrossfadeChange,
   volumeA, volumeB, onVolumeChange,
   filterA, filterB, onFilterChange,
@@ -90,18 +94,102 @@ export default function Mixer({
       <div className="grid grid-cols-2 gap-8 mb-8 relative">
         {/* Channel A EQ */}
         <div className="flex flex-col gap-4 items-center">
-          <Knob label="HI" value={eqA.high} onChange={(v) => onEqChange('A', 'high', v)} color="var(--color-brand-cyan)" size="sm" />
-          <Knob label="MID" value={eqA.mid} onChange={(v) => onEqChange('A', 'mid', v)} color="var(--color-brand-cyan)" size="sm" />
-          <Knob label="LOW" value={eqA.low} onChange={(v) => onEqChange('A', 'low', v)} color="var(--color-brand-cyan)" size="sm" />
+          <div className="flex items-center gap-1.5 relative">
+            <button
+              onClick={() => onEqKillToggle('A', 'high')}
+              className={`w-4 h-4 rounded-full border text-[7px] font-black flex items-center justify-center cursor-pointer transition-all select-none ${
+                eqKillA.high 
+                  ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] font-extrabold'
+                  : 'bg-black/40 border-white/10 text-white/20 hover:text-white/45 hover:border-white/20'
+              }`}
+              title="Kill Deck A High frequencies"
+            >
+              K
+            </button>
+            <Knob label="HI" value={eqA.high} onChange={(v) => onEqChange('A', 'high', v)} color="var(--color-brand-cyan)" size="sm" />
+          </div>
+          
+          <div className="flex items-center gap-1.5 relative">
+            <button
+              onClick={() => onEqKillToggle('A', 'mid')}
+              className={`w-4 h-4 rounded-full border text-[7px] font-black flex items-center justify-center cursor-pointer transition-all select-none ${
+                eqKillA.mid 
+                  ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] font-extrabold'
+                  : 'bg-black/40 border-white/10 text-white/20 hover:text-white/45 hover:border-white/20'
+              }`}
+              title="Kill Deck A Mid frequencies"
+            >
+              K
+            </button>
+            <Knob label="MID" value={eqA.mid} onChange={(v) => onEqChange('A', 'mid', v)} color="var(--color-brand-cyan)" size="sm" />
+          </div>
+
+          <div className="flex items-center gap-1.5 relative">
+            <button
+              onClick={() => onEqKillToggle('A', 'low')}
+              className={`w-4 h-4 rounded-full border text-[7px] font-black flex items-center justify-center cursor-pointer transition-all select-none ${
+                eqKillA.low 
+                  ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] font-extrabold'
+                  : 'bg-black/40 border-white/10 text-white/20 hover:text-white/45 hover:border-white/20'
+              }`}
+              title="Kill Deck A Low frequencies"
+            >
+              K
+            </button>
+            <Knob label="LOW" value={eqA.low} onChange={(v) => onEqChange('A', 'low', v)} color="var(--color-brand-cyan)" size="sm" />
+          </div>
+
           <div className="h-2" />
           <Knob label="FILTER" value={filterA} onChange={(v) => onFilterChange('A', v)} color="white" min={-50} max={50} size="md" />
         </div>
 
         {/* Channel B EQ */}
         <div className="flex flex-col gap-4 items-center">
-          <Knob label="HI" value={eqB.high} onChange={(v) => onEqChange('B', 'high', v)} color="var(--color-brand-purple)" size="sm" />
-          <Knob label="MID" value={eqB.mid} onChange={(v) => onEqChange('B', 'mid', v)} color="var(--color-brand-purple)" size="sm" />
-          <Knob label="LOW" value={eqB.low} onChange={(v) => onEqChange('B', 'low', v)} color="var(--color-brand-purple)" size="sm" />
+          <div className="flex items-center gap-1.5 relative">
+            <Knob label="HI" value={eqB.high} onChange={(v) => onEqChange('B', 'high', v)} color="var(--color-brand-purple)" size="sm" />
+            <button
+              onClick={() => onEqKillToggle('B', 'high')}
+              className={`w-4 h-4 rounded-full border text-[7px] font-black flex items-center justify-center cursor-pointer transition-all select-none ${
+                eqKillB.high 
+                  ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] font-extrabold'
+                  : 'bg-black/40 border-white/10 text-white/20 hover:text-white/45 hover:border-white/20'
+              }`}
+              title="Kill Deck B High frequencies"
+            >
+              K
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 relative">
+            <Knob label="MID" value={eqB.mid} onChange={(v) => onEqChange('B', 'mid', v)} color="var(--color-brand-purple)" size="sm" />
+            <button
+              onClick={() => onEqKillToggle('B', 'mid')}
+              className={`w-4 h-4 rounded-full border text-[7px] font-black flex items-center justify-center cursor-pointer transition-all select-none ${
+                eqKillB.mid 
+                  ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] font-extrabold'
+                  : 'bg-black/40 border-white/10 text-white/20 hover:text-white/45 hover:border-white/20'
+              }`}
+              title="Kill Deck B Mid frequencies"
+            >
+              K
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 relative">
+            <Knob label="LOW" value={eqB.low} onChange={(v) => onEqChange('B', 'low', v)} color="var(--color-brand-purple)" size="sm" />
+            <button
+              onClick={() => onEqKillToggle('B', 'low')}
+              className={`w-4 h-4 rounded-full border text-[7px] font-black flex items-center justify-center cursor-pointer transition-all select-none ${
+                eqKillB.low 
+                  ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.6)] font-extrabold'
+                  : 'bg-black/40 border-white/10 text-white/20 hover:text-white/45 hover:border-white/20'
+              }`}
+              title="Kill Deck B Low frequencies"
+            >
+              K
+            </button>
+          </div>
+
           <div className="h-2" />
           <Knob label="FILTER" value={filterB} onChange={(v) => onFilterChange('B', v)} color="white" min={-50} max={50} size="md" />
         </div>
