@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Play, Pause, FastForward, Rewind, ChevronRight, ChevronLeft, Zap, Layers, Music4, Save, ExternalLink, AlertTriangle, Upload } from 'lucide-react';
+import { Play, Pause, FastForward, Rewind, ChevronRight, ChevronLeft, Zap, Layers, Music4, Save, ExternalLink, AlertTriangle, Upload, Heart } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { audioEngine } from '../lib/audioEngine';
 
@@ -406,6 +406,8 @@ interface DeckProps {
   onBpmTap?: () => void;
   isSlipActive?: boolean;
   onSlipToggle?: () => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 interface InteractiveSliderProps {
@@ -838,7 +840,8 @@ export default function Deck({
   onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
   onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer, isSynced = false,
   onPlayerPlay, onPlayerPause, onEject, onSkip,
-  baseBpm = 128, onBpmTap, isSlipActive = false, onSlipToggle
+  baseBpm = 128, onBpmTap, isSlipActive = false, onSlipToggle,
+  isFavorite = false, onToggleFavorite
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -1105,6 +1108,19 @@ export default function Deck({
         <div className="flex flex-col min-w-0 flex-1 text-left">
           <span className="text-[7.5px] font-black uppercase tracking-[0.2em] opacity-30">LOADED SOUND SOURCE</span>
           <div className="flex items-center gap-1.5 min-w-0">
+            {trackUrl && onToggleFavorite && (
+              <button
+                onClick={onToggleFavorite}
+                className={`flex-shrink-0 cursor-pointer p-0.5 rounded transition-all ${
+                  isFavorite 
+                    ? 'text-rose-500 hover:scale-110 drop-shadow-[0_0_4px_rgba(244,63,94,0.5)]' 
+                    : 'text-white/20 hover:text-white/40 hover:scale-105'
+                }`}
+                title={isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+              >
+                <Heart size={11} fill={isFavorite ? 'currentColor' : 'none'} />
+              </button>
+            )}
             <span 
               title={trackTitle || undefined}
               className={`block truncate text-[10.5px] font-black font-mono uppercase ${id === 'A' ? 'text-blue-400' : 'text-purple-400'} w-full`}

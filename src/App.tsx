@@ -412,6 +412,19 @@ export default function App() {
     setPlaylist(prev => prev.filter(t => t.id !== id));
   };
 
+  const movePlaylistItem = (index: number, direction: 'up' | 'down') => {
+    setPlaylist(prev => {
+      const nextList = [...prev];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex >= 0 && targetIndex < nextList.length) {
+        const temp = nextList[index];
+        nextList[index] = nextList[targetIndex];
+        nextList[targetIndex] = temp;
+      }
+      return nextList;
+    });
+  };
+
   const captureDeckConfig = (deck: 'A' | 'B') => {
     const currentTrack = trackInfo[deck];
     if (!currentTrack.id || !currentTrack.url) return;
@@ -1563,6 +1576,17 @@ export default function App() {
                   onBpmTap={() => handleBpmTap('A')}
                   isSlipActive={slipModeState.A}
                   onSlipToggle={() => handleSlipToggle('A')}
+                  isFavorite={favorites.some(f => f.id === trackInfo.A.id)}
+                  onToggleFavorite={() => {
+                    if (trackInfo.A.id) {
+                      toggleFavorite({
+                        id: trackInfo.A.id,
+                        title: trackInfo.A.title || 'Unknown Title',
+                        artist: trackInfo.A.artist || 'Local MP3',
+                        url: trackInfo.A.url || ''
+                      });
+                    }
+                  }}
                 />
           </div>
 
@@ -1645,6 +1669,17 @@ export default function App() {
                 onBpmTap={() => handleBpmTap('B')}
                 isSlipActive={slipModeState.B}
                 onSlipToggle={() => handleSlipToggle('B')}
+                isFavorite={favorites.some(f => f.id === trackInfo.B.id)}
+                onToggleFavorite={() => {
+                  if (trackInfo.B.id) {
+                    toggleFavorite({
+                      id: trackInfo.B.id,
+                      title: trackInfo.B.title || 'Unknown Title',
+                      artist: trackInfo.B.artist || 'Local MP3',
+                      url: trackInfo.B.url || ''
+                    });
+                  }
+                }}
               />
           </div>
         </div>
@@ -1878,11 +1913,28 @@ export default function App() {
                                 <td className="px-3 py-2 text-white/40">{track.artist}</td>
                                 <td className="px-3 py-2">
                                     <div className="flex gap-2">
-                                        <button onClick={() => removeFromPlaylist(track.id)} className="p-1.5 rounded bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 transition-colors" title="Remove from Playlist"><Trash2 size={12} /></button>
-                                        <button onClick={() => toggleFavorite(track)} className={`p-1.5 rounded transition-colors ${favorites.find(f => f.id === track.id) ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} title="Toggle Favorite"><Heart size={12} fill={favorites.find(f => f.id === track.id) ? 'currentColor' : 'none'} /></button>
-                                        <div className="w-[1px] bg-white/10 mx-1" />
-                                        <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40">LOAD A</button>
-                                        <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40">LOAD B</button>
+                                        <button 
+                                          disabled={idx === 0} 
+                                          onClick={() => movePlaylistItem(idx, 'up')} 
+                                          className="p-1.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer" 
+                                          title="Move Up"
+                                        >
+                                          <ChevronUp size={12} />
+                                        </button>
+                                        <button 
+                                          disabled={idx === playlist.length - 1} 
+                                          onClick={() => movePlaylistItem(idx, 'down')} 
+                                          className="p-1.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer" 
+                                          title="Move Down"
+                                        >
+                                          <ChevronDown size={12} />
+                                        </button>
+                                        <div className="w-[1px] bg-white/10 mx-0.5" />
+                                        <button onClick={() => removeFromPlaylist(track.id)} className="p-1.5 rounded bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 transition-colors cursor-pointer" title="Remove from Playlist"><Trash2 size={12} /></button>
+                                        <button onClick={() => toggleFavorite(track)} className={`p-1.5 rounded transition-colors cursor-pointer ${favorites.find(f => f.id === track.id) ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} title="Toggle Favorite"><Heart size={12} fill={favorites.find(f => f.id === track.id) ? 'currentColor' : 'none'} /></button>
+                                        <div className="w-[1px] bg-white/10 mx-0.5" />
+                                        <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40 cursor-pointer">LOAD A</button>
+                                        <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40 cursor-pointer">LOAD B</button>
                                     </div>
                                 </td>
                                 <td className="px-3 py-2 font-mono text-white/20 hidden sm:table-cell">
@@ -1899,6 +1951,154 @@ export default function App() {
                     </tbody>
                 </table>
             )}
+
+            {activeLibraryTab === 'OFFLINE_CRATE' && (
+                <div className="space-y-4 w-full">
+                    {/* Offline Import Area */}
+                    <div className="p-4 rounded-lg bg-teal-500/[0.02] border border-teal-500/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="text-left">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-teal-400">Offline Crate Storage</h4>
+                            <p className="text-[10px] text-white/40 leading-relaxed max-w-xl">
+                                Import and cache custom audio files (MP3, WAV, FLAC, OGG, etc.) directly in your browser's persistent IndexedDB cache database. These tracks remain available offline.
+                            </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                            <input 
+                              type="file" 
+                              id="offline-crate-upload-input" 
+                              accept="audio/*" 
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const fileId = 'local_' + file.name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + file.size;
+                                  try {
+                                    await indexedDbCache.saveTrack(fileId, file.name, file.size, file.type, file);
+                                    await refreshOfflineCrate();
+                                  } catch (err: any) {
+                                    alert("Failed to cache audio file: " + err.message);
+                                  }
+                                }
+                              }} 
+                              className="hidden"
+                            />
+                            <button
+                              onClick={() => document.getElementById('offline-crate-upload-input')?.click()}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] rounded bg-teal-500/15 border border-teal-500/30 text-teal-400 hover:bg-teal-500/25 active:scale-95 transition-all font-bold cursor-pointer font-sans"
+                            >
+                              <Plus size={11} /> ADD TRACK TO CRATE
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Offline Tracks list */}
+                    <table className="w-full text-left border-separate border-spacing-y-1">
+                        <thead>
+                            <tr className="text-[9px] uppercase tracking-widest text-white/20">
+                                <th className="px-3 pb-2 font-black">Track Name</th>
+                                <th className="px-3 pb-2 font-black">Size</th>
+                                <th className="px-3 pb-2 font-black">Actions / Load</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-[11px]">
+                            {cachedTracksMeta.length > 0 ? cachedTracksMeta.map((track) => {
+                                const trackFullId = 'indexeddb:' + track.id;
+                                const isFav = favorites.some(f => f.id === trackFullId);
+                                const isInPlaylist = playlist.some(p => p.id === trackFullId);
+                                return (
+                                    <tr key={track.id} className="group bg-white/[0.01] hover:bg-white/[0.03] transition-all text-white/70">
+                                        <td className="px-3 py-2 font-medium truncate max-w-[280px]" title={track.name}>
+                                          {track.name}
+                                        </td>
+                                        <td className="px-3 py-2 text-white/40 font-mono text-[10px]">
+                                          {(track.size / (1024 * 1024)).toFixed(1)} MB
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <div className="flex gap-1.5 items-center">
+                                                {/* Favorite Button */}
+                                                <button 
+                                                  onClick={() => toggleFavorite({ 
+                                                    id: trackFullId, 
+                                                    title: track.name, 
+                                                    artist: 'Local MP3', 
+                                                    url: trackFullId 
+                                                  })} 
+                                                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                                                    isFav ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                                  }`}
+                                                  title="Toggle Favorite"
+                                                >
+                                                  <Heart size={12} fill={isFav ? 'currentColor' : 'none'} />
+                                                </button>
+
+                                                {/* Add to Playlist Button */}
+                                                <button 
+                                                  onClick={() => addToPlaylist({ 
+                                                    id: trackFullId, 
+                                                    title: track.name, 
+                                                    artist: 'Local MP3', 
+                                                    url: trackFullId 
+                                                  })} 
+                                                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                                                    isInPlaylist ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-white/40 hover:bg-white/10'
+                                                  }`}
+                                                  title="Add to Playlist"
+                                                >
+                                                  <ListPlus size={12} />
+                                                </button>
+
+                                                {/* Delete Button */}
+                                                <button 
+                                                  onClick={async () => {
+                                                    if (window.confirm(`Delete ${track.name} from offline cache?`)) {
+                                                      try {
+                                                        await indexedDbCache.deleteTrack(track.id);
+                                                        await refreshOfflineCrate();
+                                                      } catch (err: any) {
+                                                        alert("Failed to delete track: " + err.message);
+                                                      }
+                                                    }
+                                                  }} 
+                                                  className="p-1.5 rounded bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-colors cursor-pointer"
+                                                  title="Delete from cache"
+                                                >
+                                                  <Trash2 size={12} />
+                                                </button>
+
+                                                <div className="w-[1px] bg-white/10 mx-1" />
+
+                                                {/* Load Deck A */}
+                                                <button 
+                                                  onClick={() => loadTrack('A', track.name, trackFullId)} 
+                                                  className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40 active:scale-95 transition-all cursor-pointer"
+                                                  title="Load to Deck A"
+                                                >
+                                                  {loadingState.A && trackInfo.A.id === trackFullId ? '...' : 'LOAD A'}
+                                                </button>
+
+                                                {/* Load Deck B */}
+                                                <button 
+                                                  onClick={() => loadTrack('B', track.name, trackFullId)} 
+                                                  className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40 active:scale-95 transition-all cursor-pointer"
+                                                  title="Load to Deck B"
+                                                >
+                                                  {loadingState.B && trackInfo.B.id === trackFullId ? '...' : 'LOAD B'}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            }) : (
+                                <tr>
+                                    <td colSpan={3} className="py-12 text-center text-white/20 italic font-mono text-[10px]">
+                                        No tracks stored in your offline crate. Click "ADD TRACK TO CRATE" above to save music for offline sessions.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+
             {activeLibraryTab === 'CRATES' && (
                 <table className="w-full text-left border-separate border-spacing-y-1">
                     <thead>

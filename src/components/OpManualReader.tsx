@@ -45,7 +45,8 @@ export default function OpManualReader() {
         'Tempo Slope Fader: Multi-percent pitch adjustment. Slide up or down to vary the deck\'s BPM. Double-tap to reset to normal.',
         'Hot Cues Quadrant (1, 2, 3, 4): Store up to 4 instant trigger markings per song. Tap an empty pad to write, tap again to instantly warp to that spot. Press and hold (0.7s) to invoke a clean red wiping overlay to delete a cue, or right-click to clear.',
         'Key Lock (MT): Activates professional Master Tempo pitch stabilization. Keeps vocal tracks in natural keys even at extreme speeds.',
-        'Slip Mode (SLIP Button): Keeps a virtual background playhead running silently during scratches or loops. On release, playback snaps seamlessly to this background spot.'
+        'Slip Mode (SLIP Button): Keeps a virtual background playhead running silently during scratches or loops. On release, playback snaps seamlessly to this background spot.',
+        'Favorite Toggle (Heart Icon): Tapping the heart button next to the loaded track title instantly toggles the song on or off your Favorites list.'
       ]
     },
     {
@@ -91,6 +92,7 @@ export default function OpManualReader() {
         'Audius Hits: Search 1 million+ underground tracks instantly over decentralised cloud API feeds.',
         'YouTube & Spotify Ingest: Paste any third-party stream URL to track your references or overlay media.',
         'Local File Drops: Click "LOAD FILE" or drag-and-drop any standard WAV, MP3, or AIFF from your files.',
+        'Offline Crate: Upload files directly into the browser\'s persistent IndexedDB cache storage. Stored tracks show size, delete buttons, and direct load to Deck A or Deck B actions.',
         'Session Backup: Save your currently programmed playlist and favorites lists to a JSON backup file on your PC. Import it anytime to restore your full crate state instantly.'
       ]
     },

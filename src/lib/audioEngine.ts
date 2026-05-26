@@ -740,29 +740,32 @@ export class AudioEngine {
       try {
         const now = Tone.now();
         const osc = new Tone.Oscillator("sawtooth");
+        const lfo = new Tone.LFO(8, 20, 80).start(now); // LFO at 8Hz, amplitude 20 to 80 Hz
         const gain = new Tone.Gain(0);
-        const filter = new Tone.Filter(1800, "lowpass");
+        const filter = new Tone.Filter(1500, "lowpass");
         
         osc.connect(gain);
+        lfo.connect(osc.detune);
         gain.connect(filter);
         filter.toDestination();
         
-        osc.frequency.setValueAtTime(260, now);
-        osc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
+        osc.frequency.setValueAtTime(300, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 1.5);
         
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
-        gain.gain.linearRampToValueAtTime(0, now + 1.4);
+        gain.gain.linearRampToValueAtTime(0.45, now + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
         
         osc.start(now);
-        osc.stop(now + 1.4);
+        osc.stop(now + 1.5);
         
         // Clean up references to prevent accumulation
         setTimeout(() => {
           osc.dispose();
+          lfo.dispose();
           gain.dispose();
           filter.dispose();
-        }, 2000);
+        }, 2500);
       } catch (e) {
         console.warn(e);
       }
@@ -772,26 +775,29 @@ export class AudioEngine {
     if (name === 'sub_drop') {
       try {
         const now = Tone.now();
-        const osc = new Tone.Oscillator("sine");
+        const osc = new Tone.Oscillator("triangle");
         const gain = new Tone.Gain(0);
+        const lowpass = new Tone.Filter(120, "lowpass");
         
         osc.connect(gain);
-        gain.toDestination();
+        gain.connect(lowpass);
+        lowpass.toDestination();
         
-        osc.frequency.setValueAtTime(120, now); // slightly higher start to be audible on more speakers
-        osc.frequency.exponentialRampToValueAtTime(36, now + 1.6);
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 1.8);
         
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.4, now + 0.05);
-        gain.gain.linearRampToValueAtTime(0, now + 1.6);
+        gain.gain.linearRampToValueAtTime(0.75, now + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
         
         osc.start(now);
-        osc.stop(now + 1.6);
+        osc.stop(now + 1.8);
         
         setTimeout(() => {
           osc.dispose();
           gain.dispose();
-        }, 2500);
+          lowpass.dispose();
+        }, 3000);
       } catch (e) {
         console.warn(e);
       }

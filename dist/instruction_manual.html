@@ -305,6 +305,21 @@
                 <td class="p-3 text-zinc-300">Click & Drag Vertical</td>
                 <td class="p-3 text-zinc-400">Physical speed fader. Adjusts track speed permanently up to ±50%. Moving the slider DOWN speeds the song up (traditional Pioneer standard). Moving UP slows it down.</td>
               </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-red-500 inline-block mr-2"></span>TAP BPM</td>
+                <td class="p-3 text-brand-cyan">Tap to the Beat</td>
+                <td class="p-3 text-zinc-400">Allows manual BPM tempo calculation by tapping along with the rhythm. Overrides the base BPM of the loaded song dynamically.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block mr-2"></span>SLIP MODE</td>
+                <td class="p-3 text-brand-cyan">Click to Toggle On/Off</td>
+                <td class="p-3 text-zinc-400">Keeps a virtual playhead running silently in the background during loops, scratch, or pause. Playback snaps back to grid position on exit.</td>
+              </tr>
+              <tr class="hover:bg-white/[0.01]">
+                <td class="p-3 text-white font-bold"><span class="w-2 h-2 rounded-full bg-pink-500 inline-block mr-2"></span>FAVORITE (Heart)</td>
+                <td class="p-3 text-brand-cyan">Single Click / Touch</td>
+                <td class="p-3 text-zinc-400">Located next to the track name in the loaded sound source header. Toggles the current song into the FAVORITES crate database and saves to localStorage.</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -336,6 +351,7 @@
             <ul class="space-y-2 text-xs text-zinc-400 font-mono">
               <li><strong class="text-white">Left-Click & Drag (Circular):</strong> Grabs the vinyl surface. Dragging back-and-forth simulates real vinyl scratching, injecting live mechanical vinyl sound waves and letting you scrub perfectly to a beat.</li>
               <li><strong class="text-white">Vertical Scroll Drag:</strong> Triggers temporary deceleration or acceleration (Pitch Bend) up to ±8%. Release the grab to snap back to the exact grid tempo instantly.</li>
+              <li><strong class="text-white">Platter Customization Themes:</strong> Choose between **VINYL** (classic groove circles), **CDJ** (spinning strobe ring markers), and **NEON** (pulsing glowing wave loops) underneath the platter to change the deck skin.</li>
             </ul>
           </div>
         </div>
@@ -413,6 +429,7 @@
                 <li>• <strong class="text-white">HI:</strong> Adjusts highs (hiss, hats, air).</li>
                 <li>• <strong class="text-white">MID:</strong> Adjusts mids (voice, synths).</li>
                 <li>• <strong class="text-white">LOW:</strong> Boosts or cuts sub-bass kicks.</li>
+                <li>• <strong class="text-teal-400 font-bold">K (EQ KILL):</strong> Next to each EQ knob. Instantly mutes that frequency band completely (-40dB), overriding the knob position.</li>
               </ul>
             </div>
             <p class="text-[9px] text-yellow-500/80 mt-4 border-t border-white/5 pt-2">
@@ -439,7 +456,7 @@
               <div class="text-brand-cyan font-bold uppercase text-[9px] mb-2">3. LINE FADERS & CURVES</div>
               <p class="text-[11px] leading-relaxed">The linear vertical sliders control channel levels, feeding into the horizontal crossfader bottom matrix:</p>
               <ul class="text-[10px] space-y-1 mt-2 pl-2">
-                <li>• <strong class="text-white">CURVE:</strong> Tightens crossfader fade.</li>
+                <li>• <strong class="text-white">CURVE KNOB:</strong> Adjusts the fader curve logic: Linear (0.0-0.3) for smooth fades, Constant Power (0.3-0.7) for standard mixing, or Battle Cut (0.7-1.0) for sharp cuts.</li>
                 <li>• <strong class="text-white">CLEAN SOUND:</strong> Resets Web Audio buffers instantly during glitch/stutters.</li>
                 <li>• <strong class="text-white">RESET CONSOLE:</strong> Instant zero-points.</li>
               </ul>
@@ -517,7 +534,7 @@
           At the bottom of your workstation lies your musical record case. You can leverage four dedicated intake streams to prep your set:
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono text-zinc-400">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs font-mono text-zinc-400">
           <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
             <span class="text-white font-bold block mb-1">1. SYSTEM FAVS</span>
             Contains royalty-free organic tracks from Pixabay. Ready to mix out-of-the-box.
@@ -533,6 +550,10 @@
           <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
             <span class="text-brand-orange font-bold block mb-1">4. LOCAL FILE DROP</span>
             Drag any raw `.mp3` or `.wav` from your laptop or PC straight onto the console.
+          </div>
+          <div class="bg-zinc-950/40 p-3 rounded border border-white/5">
+            <span class="text-teal-400 font-bold block mb-1">5. OFFLINE CRATE</span>
+            Import and cache files directly inside browser database cache. Stored tracks persist offline and support direct Deck A/B loading.
           </div>
         </div>
       </section>
