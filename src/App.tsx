@@ -314,6 +314,11 @@ export default function App() {
 
       await audioEngine.loadTrack(deck, resolvedStreamUrl);
       
+      // Check again if the load request was cancelled or overridden during the await!
+      if (activeLoadingUrlRef.current[deck] !== trackingKey) {
+        return;
+      }
+      
       const computedDuration = audioEngine.getDeck(deck).buffer.duration || 180;
       
       // Re-apply current playback rate to the new track in the engine
@@ -373,6 +378,9 @@ export default function App() {
   };
 
   const handleEjectDeck = (deck: 'A' | 'B') => {
+    // Clear active loading tracking key so pending loads are rejected/ignored
+    activeLoadingUrlRef.current[deck] = null;
+
     // 1. Reset source back to AUDIO
     setDeckSources(prev => ({ ...prev, [deck]: 'AUDIO' }));
     setExternalUrls(prev => ({ ...prev, [deck]: null }));
@@ -1493,11 +1501,21 @@ export default function App() {
 
             {loadingState[deck] && deckSources[deck] !== 'EXTERNAL' && (
               <div className="absolute inset-0 z-30 bg-[#070709]/85 backdrop-blur-[3px] flex flex-col items-center justify-center border border-white/5">
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3">
                   <div className={`w-5 h-5 border-2 border-t-transparent animate-spin rounded-full ${deck === 'A' ? 'border-blue-400' : 'border-purple-400'}`} />
                   <span className={`text-[8px] uppercase font-black tracking-widest font-mono select-none ${deck === 'A' ? 'text-blue-400' : 'text-purple-400'}`}>
                     ANALYZING & BUFFERING WAVEFORM...
                   </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEjectDeck(deck);
+                    }}
+                    className="mt-1 px-2.5 py-1 rounded bg-red-950/50 hover:bg-red-500 hover:text-white border border-red-500/20 text-[7.5px] font-black uppercase tracking-widest transition-all cursor-pointer shadow-[0_2px_8px_rgba(239,68,68,0.2)] active:scale-95"
+                    title="Cancel loading and purge buffer"
+                  >
+                    CANCEL / PURGE
+                  </button>
                 </div>
               </div>
             )}
