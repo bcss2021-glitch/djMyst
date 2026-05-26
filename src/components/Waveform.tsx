@@ -125,6 +125,39 @@ export default function Waveform({ url, isPlaying, color = '#00f5ff', deckId, on
     }
   }, [isPlaying]);
 
+  // Synchronize WaveSurfer's playback timeline with AudioEngine's actual core position
+  useEffect(() => {
+    if (!deckId || sourceType === 'EXTERNAL') return;
+
+    const interval = setInterval(() => {
+      if (wavesurferRef.current) {
+        try {
+          const currentAudioTime = audioEngine.getPosition(deckId);
+          if (isNaN(currentAudioTime) || currentAudioTime === undefined || currentAudioTime === null) return;
+
+          const currentWS = wavesurferRef.current.getCurrentTime();
+          const diff = Math.abs(currentWS - currentAudioTime);
+
+          if (!isPlaying) {
+            // When paused/stopped/cueing, align immediately on any change
+            if (diff > 0.02) {
+              wavesurferRef.current.setTime(currentAudioTime);
+            }
+          } else {
+            // When actively playing, correct drift if playheads diverge beyond threshold
+            if (diff > 0.15) {
+              wavesurferRef.current.setTime(currentAudioTime);
+            }
+          }
+        } catch (e) {
+          // Keep failure silent/graceful
+        }
+      }
+    }, 50);
+
+    return () => clearInterval(interval);
+  }, [deckId, sourceType, isPlaying]);
+
   // Real-time spectrum drawing
   useEffect(() => {
     if (!deckId || !canvasRef.current) return;

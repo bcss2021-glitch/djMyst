@@ -51,15 +51,28 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
     }
     lastTap = now;
 
+    const touch = e.changedTouches[0] || e.touches[0];
+    if (!touch) return;
+    const touchId = touch.identifier;
+
     setIsDragging(true);
-    const startY = e.touches[0].clientY;
+    const startY = touch.clientY;
     const startVal = value;
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (moveEvent.cancelable) {
         moveEvent.preventDefault();
       }
-      const deltaY = startY - moveEvent.touches[0].clientY;
+      let trackedTouch = null;
+      for (let i = 0; i < moveEvent.touches.length; i++) {
+        if (moveEvent.touches[i].identifier === touchId) {
+          trackedTouch = moveEvent.touches[i];
+          break;
+        }
+      }
+      if (!trackedTouch) return;
+
+      const deltaY = startY - trackedTouch.clientY;
       const range = max - min;
       const sensitivity = 1.0;
       let newVal = startVal + (deltaY / 110) * range * sensitivity;
@@ -67,14 +80,34 @@ export default function Knob({ label, min = -20, max = 20, value, onChange, colo
       onChange(newVal);
     };
 
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
+    const handleTouchEnd = (endEvent: TouchEvent) => {
+      let isStillTracking = false;
+      for (let i = 0; i < endEvent.touches.length; i++) {
+        if (endEvent.touches[i].identifier === touchId) {
+          isStillTracking = true;
+          break;
+        }
+      }
+      let touchEnded = false;
+      if ('changedTouches' in endEvent) {
+        for (let i = 0; i < endEvent.changedTouches.length; i++) {
+          if (endEvent.changedTouches[i].identifier === touchId) {
+            touchEnded = true;
+            break;
+          }
+        }
+      }
+      if (!isStillTracking || touchEnded) {
+        setIsDragging(false);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleTouchEnd);
+        window.removeEventListener('touchcancel', handleTouchEnd);
+      }
     };
 
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {

@@ -1,9 +1,14 @@
 import { motion } from 'motion/react';
-import { Play, Pause, FastForward, Rewind, ChevronRight, ChevronLeft, Zap, Layers, Music4, Save, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Play, Pause, FastForward, Rewind, ChevronRight, ChevronLeft, Zap, Layers, Music4, Save, ExternalLink, AlertTriangle, Upload } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import ReactPlayer from 'react-player';
-const Player = ReactPlayer as any;
 import { audioEngine } from '../lib/audioEngine';
+
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: (() => void) | undefined;
+  }
+}
 import Waveform from './Waveform';
 import Fader from './Fader';
 import Knob from './Knob';
@@ -135,24 +140,52 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 0) return;
-    const touch = e.touches[0];
+    const touch = e.changedTouches[0] || e.touches[0];
+    if (!touch) return;
+    const touchId = touch.identifier;
     handleStart(touch.clientX, touch.clientY);
     
     const handleGlobalTouchMove = (moveEvent: TouchEvent) => {
-      if (moveEvent.touches.length === 0) return;
-      const t = moveEvent.touches[0];
-      handleMove(t.clientX, t.clientY);
+      let trackedTouch = null;
+      for (let i = 0; i < moveEvent.touches.length; i++) {
+        if (moveEvent.touches[i].identifier === touchId) {
+          trackedTouch = moveEvent.touches[i];
+          break;
+        }
+      }
+      if (trackedTouch) {
+        handleMove(trackedTouch.clientX, trackedTouch.clientY);
+      }
     };
     
-    const handleGlobalTouchEnd = () => {
-      handleEnd();
-      document.removeEventListener('touchmove', handleGlobalTouchMove);
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
+    const handleGlobalTouchEnd = (endEvent: TouchEvent) => {
+      let isStillTracking = false;
+      for (let i = 0; i < endEvent.touches.length; i++) {
+        if (endEvent.touches[i].identifier === touchId) {
+          isStillTracking = true;
+          break;
+        }
+      }
+      let touchEnded = false;
+      if ('changedTouches' in endEvent) {
+        for (let i = 0; i < endEvent.changedTouches.length; i++) {
+          if (endEvent.changedTouches[i].identifier === touchId) {
+            touchEnded = true;
+            break;
+          }
+        }
+      }
+      if (!isStillTracking || touchEnded) {
+        handleEnd();
+        document.removeEventListener('touchmove', handleGlobalTouchMove);
+        document.removeEventListener('touchend', handleGlobalTouchEnd);
+        document.removeEventListener('touchcancel', handleGlobalTouchEnd);
+      }
     };
     
-    document.addEventListener('touchmove', handleGlobalTouchMove);
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false });
     document.addEventListener('touchend', handleGlobalTouchEnd);
+    document.addEventListener('touchcancel', handleGlobalTouchEnd);
   };
 
   return (
@@ -244,6 +277,9 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
 interface DeckProps {
   id: 'A' | 'B';
   trackUrl: string | null;
+  trackTitle?: string;
+  trackArtist?: string;
+  onFileDrop?: (file: File) => void;
   isPlaying: boolean;
   isLoading?: boolean;
   onPlayPause: () => void;
@@ -264,7 +300,7 @@ interface DeckProps {
   gain?: number;
   onGainChange?: (val: number) => void;
   hotCues?: number[];
-  onHotCue?: (index: number) => void;
+  onHotCue?: (index: number, action?: 'TRIGGER' | 'CLEAR') => void;
   onClearCues?: () => void;
   loop?: { in: number | null, active: boolean };
   onLoopIn?: () => void;
@@ -282,6 +318,10 @@ interface DeckProps {
   onScratchEnd?: () => void;
   onPlayerReady?: () => void;
   onPlayerBuffer?: () => void;
+  onPlayerPlay?: () => void;
+  onPlayerPause?: () => void;
+  onEject?: () => void;
+  onSkip?: (seconds: number) => void;
   isSynced?: boolean;
 }
 
@@ -297,7 +337,7 @@ interface InteractiveSliderProps {
 function InteractiveSlider({ label, value, min, max, onChange, color }: InteractiveSliderProps) {
   const [isDragging, setIsDragging] = useState(false);
   
-  const handleStart = (e: React.MouseEvent | React.TouchEvent, clientY: number) => {
+  const handleStart = (e: React.MouseEvent | React.TouchEvent, clientY: number, touchId: number | null) => {
     e.preventDefault();
     setIsDragging(true);
     const rect = e.currentTarget.parentElement?.getBoundingClientRect();
@@ -318,21 +358,59 @@ function InteractiveSlider({ label, value, min, max, onChange, color }: Interact
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (moveEvent.cancelable) moveEvent.preventDefault();
-      updateValue(moveEvent.touches[0].clientY);
+      let trackedTouch = null;
+      for (let i = 0; i < moveEvent.touches.length; i++) {
+        if (moveEvent.touches[i].identifier === touchId) {
+          trackedTouch = moveEvent.touches[i];
+          break;
+        }
+      }
+      if (trackedTouch) {
+        updateValue(trackedTouch.clientY);
+      }
     };
 
-    const handleStop = () => {
-      setIsDragging(false);
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleStop);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleStop);
+    const handleStop = (stopEvent: MouseEvent | TouchEvent) => {
+      if (touchId !== null && 'touches' in stopEvent) {
+        let isStillTracking = false;
+        for (let i = 0; i < stopEvent.touches.length; i++) {
+          if (stopEvent.touches[i].identifier === touchId) {
+            isStillTracking = true;
+            break;
+          }
+        }
+        let touchEnded = false;
+        if ('changedTouches' in stopEvent) {
+          for (let i = 0; i < stopEvent.changedTouches.length; i++) {
+            if (stopEvent.changedTouches[i].identifier === touchId) {
+              touchEnded = true;
+              break;
+            }
+          }
+        }
+        if (!isStillTracking || touchEnded) {
+          setIsDragging(false);
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleStop);
+          window.removeEventListener('touchmove', handleTouchMove);
+          window.removeEventListener('touchend', handleStop);
+          window.removeEventListener('touchcancel', handleStop);
+        }
+      } else {
+        setIsDragging(false);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleStop);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleStop);
+        window.removeEventListener('touchcancel', handleStop);
+      }
     };
 
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleStop);
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleStop);
+    window.addEventListener('touchcancel', handleStop);
   };
 
   const percentage = ((value - min) / (max - min)) * 100;
@@ -347,8 +425,13 @@ function InteractiveSlider({ label, value, min, max, onChange, color }: Interact
       <div className="relative h-20 w-10 bg-black/35 border border-white/5 rounded-md flex items-center justify-center p-1">
         <div 
           className="relative h-full w-4 flex items-center justify-center cursor-pointer"
-          onMouseDown={(e) => handleStart(e, e.clientY)}
-          onTouchStart={(e) => handleStart(e, e.touches[0].clientY)}
+          onMouseDown={(e) => handleStart(e, e.clientY, null)}
+          onTouchStart={(e) => {
+            const touch = e.changedTouches[0] || e.touches[0];
+            if (touch) {
+              handleStart(e, touch.clientY, touch.identifier);
+            }
+          }}
           onDoubleClick={() => onChange(min)}
           title="Drag vertical fader. Double-tap/click to clear."
         >
@@ -423,8 +506,12 @@ function XYPad({ fx, onFxChange, accentColor }: XYPadProps) {
       onFxChange?.('flanger', yNorm * 0.8);
     };
 
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const isTouchEvent = 'touches' in e;
+    const touch = isTouchEvent ? ((e as React.TouchEvent).changedTouches[0] || (e as React.TouchEvent).touches[0]) : null;
+    const touchId = touch ? touch.identifier : null;
+
+    const clientX = touch ? touch.clientX : (e as React.MouseEvent).clientX;
+    const clientY = touch ? touch.clientY : (e as React.MouseEvent).clientY;
     updatePoint(clientX, clientY);
 
     const handleMove = (moveEvent: MouseEvent) => {
@@ -433,21 +520,62 @@ function XYPad({ fx, onFxChange, accentColor }: XYPadProps) {
 
     const handleTouchMove = (moveEvent: TouchEvent) => {
       if (moveEvent.cancelable) moveEvent.preventDefault();
-      updatePoint(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY);
+      let trackedTouch = null;
+      for (let i = 0; i < moveEvent.touches.length; i++) {
+        if (moveEvent.touches[i].identifier === touchId) {
+          trackedTouch = moveEvent.touches[i];
+          break;
+        }
+      }
+      if (trackedTouch) {
+        updatePoint(trackedTouch.clientX, trackedTouch.clientY);
+      }
     };
 
-    const handleStop = () => {
-      setIsPressing(false);
-      window.removeEventListener('mousemove', handleMove);
-      window.removeEventListener('mouseup', handleStop);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleStop);
+    const handleStop = (stopEvent: MouseEvent | TouchEvent) => {
+      if (touchId !== null && 'touches' in stopEvent) {
+        let isStillTracking = false;
+        for (let i = 0; i < stopEvent.touches.length; i++) {
+          if (stopEvent.touches[i].identifier === touchId) {
+            isStillTracking = true;
+            break;
+          }
+        }
+        let touchEnded = false;
+        if ('changedTouches' in stopEvent) {
+          for (let i = 0; i < stopEvent.changedTouches.length; i++) {
+            if (stopEvent.changedTouches[i].identifier === touchId) {
+              touchEnded = true;
+              break;
+            }
+          }
+        }
+        if (!isStillTracking || touchEnded) {
+          setIsPressing(false);
+          window.removeEventListener('mousemove', handleMove);
+          window.removeEventListener('mouseup', handleStop);
+          window.removeEventListener('touchmove', handleTouchMove);
+          window.removeEventListener('touchend', handleStop);
+          window.removeEventListener('touchcancel', handleStop);
+        }
+      } else if (!('touches' in stopEvent)) {
+        setIsPressing(false);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleStop);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleStop);
+        window.removeEventListener('touchcancel', handleStop);
+      }
     };
 
-    window.addEventListener('mousemove', handleMove);
-    window.addEventListener('mouseup', handleStop);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleStop);
+    if (isTouchEvent) {
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleStop);
+      window.addEventListener('touchcancel', handleStop);
+    } else {
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleStop);
+    }
   };
 
   const handleReset = () => {
@@ -506,26 +634,433 @@ function XYPad({ fx, onFxChange, accentColor }: XYPadProps) {
   );
 }
 
+interface HotCueButtonProps {
+  index: number;
+  hasCue: boolean;
+  cueTime?: number;
+  glowClass: string;
+  formatTime: (sec: number) => string;
+  onHotCue?: (index: number, action?: 'TRIGGER' | 'CLEAR') => void;
+}
+
+function HotCueButton({ index, hasCue, cueTime, glowClass, formatTime, onHotCue }: HotCueButtonProps) {
+  const [isHolding, setIsHolding] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const wasTriggeredRef = useRef(false);
+  const hadCueOnStartRef = useRef(false);
+  const hasTouchRef = useRef(false);
+
+  const startPress = (e: React.MouseEvent | React.TouchEvent) => {
+    if (e.type === 'mousedown') {
+      if ((e as React.MouseEvent).button !== 0) return; // Only primary clicks
+      if (hasTouchRef.current) return; // Avoid double triggering on hybrid devices
+    } else if (e.type === 'touchstart') {
+      hasTouchRef.current = true;
+    }
+
+    hadCueOnStartRef.current = hasCue;
+    wasTriggeredRef.current = false;
+
+    // Trigger instantly for standard DJ zero-latency feel
+    onHotCue?.(index, 'TRIGGER');
+
+    if (hasCue) {
+      setIsHolding(true);
+      timerRef.current = setTimeout(() => {
+        onHotCue?.(index, 'CLEAR');
+        setIsHolding(false);
+        wasTriggeredRef.current = true;
+        
+        // Tactile Haptic feedback if supported on mobile
+        if ('vibrate' in navigator) {
+          try {
+            navigator.vibrate(50);
+          } catch (err) {}
+        }
+      }, 700);
+    }
+  };
+
+  const endPress = (e: React.MouseEvent | React.TouchEvent) => {
+    if (e.type === 'touchend') {
+      setTimeout(() => {
+        hasTouchRef.current = false;
+      }, 300);
+    }
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setIsHolding(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return (
+    <button
+      onMouseDown={startPress}
+      onMouseUp={(e) => endPress(e)}
+      onMouseLeave={(e) => endPress(e)}
+      onTouchStart={startPress}
+      onTouchEnd={(e) => endPress(e)}
+      onTouchCancel={(e) => endPress(e)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onHotCue?.(index, 'CLEAR');
+      }}
+      title={hasCue ? `Jump to Cue ${index + 1} (${formatTime(cueTime || 0)}) — Hold to clear, Right-click to clear` : `Set Cue ${index + 1} at current position`}
+      className={`h-9 border rounded-sm transition-all tactile-button flex flex-col items-center justify-center leading-none relative overflow-hidden select-none active:scale-95 ${hasCue ? glowClass : 'bg-white/5 border-white/5 text-white/20 hover:bg-white/10'}`}
+    >
+      <style>{`
+        @keyframes cueWipeFill {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+      `}</style>
+      
+      {/* Wipe Fill overlay indicator for deletion timer */}
+      {isHolding && (
+        <div 
+          className="absolute inset-y-0 left-0 bg-red-600/30 origin-left"
+          style={{
+            animation: 'cueWipeFill 0.7s linear forwards'
+          }}
+        />
+      )}
+
+      <span className="text-[8px] font-black relative z-10">{index + 1}</span>
+      {hasCue && cueTime !== undefined ? (
+        <span className="text-[7.5px] font-mono font-bold text-white mt-0.5 tracking-tight relative z-10">
+          {formatTime(cueTime)}
+        </span>
+      ) : (
+        <span className="text-[6.5px] font-mono tracking-tighter opacity-30 mt-0.5 relative z-10">
+          EMPTY
+        </span>
+      )}
+    </button>
+  );
+}
+
 export default function Deck({ 
-  id, trackUrl, isPlaying, isLoading, onPlayPause, onSync, 
+  id, trackUrl, trackTitle, trackArtist, onFileDrop, isPlaying, isLoading, onPlayPause, onSync, 
   playbackRate, onRateChange, onPitchBend, fx, onFxChange, 
   onPadTrigger, onRoll, activeRoll, onSaveConfig, sourceType = 'AUDIO', externalUrl,
   keyLock, onKeyLockToggle, gain = 1, onGainChange, hotCues = [], onHotCue, onClearCues,
   loop, onLoopIn, onLoopOut, onExitLoop, resolvedVolume = 1,
   onRewind, onCuePress, onCueRelease, isCueActive = false, onReverseToggle, isReversed = false,
-  onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer, isSynced = false
+  onScratchDrag, onScratchStart, onScratchEnd, onPlayerReady, onPlayerBuffer, isSynced = false,
+  onPlayerPlay, onPlayerPause, onEject, onSkip
 }: DeckProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      onFileDrop?.(file);
+    }
+  };
+  const [advancedTab, setAdvancedTab] = useState<'FX' | 'SAMPLER'>('FX');
   const [fxViewMode, setFxViewMode] = useState<'KNOBS' | 'SLIDERS' | 'XY_PAD'>('KNOBS');
+
+  const [extDuration, setExtDuration] = useState(0);
+  const [extPlayedSeconds, setExtPlayedSeconds] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [nativeDuration, setNativeDuration] = useState(0);
+
+  const ytPlayerRef = useRef<any>(null);
+  const [isYtReady, setIsYtReady] = useState(false);
+
+  // Helper to extract YouTube ID
+  const getYouTubeId = (url: string): string | null => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // Helper to get Spotify embed URL
+  const getSpotifyEmbedUrl = (url: string): string | null => {
+    const match = url.match(/\/(track|playlist|album)\/([a-zA-Z0-9]+)/);
+    if (match) {
+      return `https://open.spotify.com/embed/${match[1]}/${match[2]}`;
+    }
+    return null;
+  };
+
+  const ytId = externalUrl ? getYouTubeId(externalUrl) : null;
+  const spotifyEmbedUrl = externalUrl ? getSpotifyEmbedUrl(externalUrl) : null;
+
+  // Dynamically load YouTube API script if needed
+  useEffect(() => {
+    if (sourceType !== 'EXTERNAL' || !ytId) return;
+
+    let active = true;
+
+    const initPlayer = (YT: any) => {
+      if (!active) return;
+      
+      // Destroy existing player if any
+      if (ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch (e) {}
+        ytPlayerRef.current = null;
+      }
+
+      try {
+        const container = document.getElementById(`yt-player-${id}`);
+        if (!container) return;
+
+        ytPlayerRef.current = new YT.Player(`yt-player-${id}`, {
+          videoId: ytId,
+          playerVars: {
+            autoplay: isPlaying ? 1 : 0,
+            controls: 1,
+            playsinline: 1,
+            enablejsapi: 1,
+            origin: window.location.origin && window.location.origin !== 'null' ? window.location.origin : undefined
+          },
+          events: {
+            onReady: (event: any) => {
+              if (!active) return;
+              setIsYtReady(true);
+              event.target.setVolume(resolvedVolume * 100);
+              onPlayerReady?.();
+              setExtDuration(event.target.getDuration() || 0);
+            },
+            onStateChange: (event: any) => {
+              if (!active) return;
+              // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
+              const state = event.data;
+              if (state === 1) {
+                onPlayerPlay?.();
+              } else if (state === 2 || state === 0) {
+                onPlayerPause?.();
+              } else if (state === 3) {
+                onPlayerBuffer?.();
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.error("Error creating YouTube player instance:", err);
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      initPlayer(window.YT);
+    } else {
+      // Setup global callback if not yet defined
+      const existingCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (existingCallback) existingCallback();
+        if (window.YT && window.YT.Player) {
+          initPlayer(window.YT);
+        }
+      };
+
+      // Inject script if not already in document
+      if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        if (firstScriptTag && firstScriptTag.parentNode) {
+          firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        } else {
+          document.head.appendChild(tag);
+        }
+      }
+    }
+
+    return () => {
+      active = false;
+      setIsYtReady(false);
+      if (ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current.destroy();
+        } catch (e) {}
+        ytPlayerRef.current = null;
+      }
+    };
+  }, [externalUrl, sourceType, id]);
+
+  // Synchronize playing/pausing state
+  useEffect(() => {
+    if (!ytPlayerRef.current || !isYtReady) return;
+    try {
+      const playerState = ytPlayerRef.current.getPlayerState();
+      if (isPlaying && playerState !== 1) {
+        ytPlayerRef.current.playVideo();
+      } else if (!isPlaying && playerState === 1) {
+        ytPlayerRef.current.pauseVideo();
+      }
+    } catch (e) {}
+  }, [isPlaying, isYtReady]);
+
+  // Synchronize volume level
+  useEffect(() => {
+    if (!ytPlayerRef.current || !isYtReady) return;
+    try {
+      ytPlayerRef.current.setVolume(resolvedVolume * 100);
+    } catch (e) {}
+  }, [resolvedVolume, isYtReady]);
+
+  // Track playback time progress for YouTube
+  useEffect(() => {
+    if (sourceType !== 'EXTERNAL' || !isPlaying || !isYtReady) return;
+
+    const interval = setInterval(() => {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
+        try {
+          const time = ytPlayerRef.current.getCurrentTime();
+          setExtPlayedSeconds(time || 0);
+          const duration = ytPlayerRef.current.getDuration();
+          if (duration && duration !== extDuration) {
+            setExtDuration(duration);
+          }
+        } catch (e) {}
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, sourceType, extDuration, isYtReady]);
+
+  // Read native current position
+  useEffect(() => {
+    if (sourceType === 'EXTERNAL') return;
+    
+    let animId: number;
+    const updateTime = () => {
+      setCurrentTime(audioEngine.getPosition(id));
+      animId = requestAnimationFrame(updateTime);
+    };
+    updateTime();
+    
+    return () => cancelAnimationFrame(animId);
+  }, [id, sourceType, isPlaying, trackUrl]);
+
+  // Read native duration
+  useEffect(() => {
+    if (sourceType === 'EXTERNAL') return;
+    
+    const updateDuration = () => {
+      const nativePlayer = audioEngine.getDeck(id);
+      if (nativePlayer && nativePlayer.buffer && nativePlayer.buffer.loaded) {
+        setNativeDuration(nativePlayer.buffer.duration || 0);
+      }
+    };
+    
+    updateDuration();
+    const interval = setInterval(updateDuration, 1000);
+    return () => clearInterval(interval);
+  }, [id, sourceType, trackUrl]);
+
+  const resolvedCurrentTime = sourceType === 'EXTERNAL' ? extPlayedSeconds : currentTime;
+  const resolvedDuration = sourceType === 'EXTERNAL' ? extDuration : nativeDuration;
+
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds === null || seconds < 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const accentColor = id === 'A' ? 'var(--color-brand-cyan)' : 'var(--color-brand-purple)';
   const glowClass = id === 'A' ? 'active-glow-cyan' : 'active-glow-purple';
 
   const samples = ["scratch", "fx_1", "fx_2", "fx_3"];
 
   return (
-    <div className={`flex flex-col items-center justify-between py-3 flex-1 h-full relative hardware-panel ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}>
+    <div 
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`flex flex-col items-center justify-between py-3 flex-1 h-full relative hardware-panel ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
+    >
+      {/* Drag and Drop File Highlight Overlay */}
+      {isDraggingFile && (
+        <div className={`absolute inset-0 z-50 rounded-lg backdrop-blur-md flex flex-col items-center justify-center border-2 border-dashed p-6 text-center transition-all ${
+          id === 'A' 
+            ? 'bg-blue-950/90 border-blue-400 text-blue-300 shadow-[0_0_30px_rgba(59,130,246,0.4)]' 
+            : 'bg-purple-950/90 border-purple-400 text-purple-300 shadow-[0_0_30px_rgba(168,85,247,0.4)]'
+        }`}>
+          <Upload className="w-10 h-10 mb-2 animate-bounce" />
+          <p className="text-xs font-black uppercase tracking-widest">
+            DROP FILE TO LOAD ON DECK {id}
+          </p>
+          <p className="text-[9px] opacity-60 font-mono mt-1">
+            Supports MP3, WAV, OGG, M4A, FLAC, etc.
+          </p>
+        </div>
+      )}
+
+      {/* Track info strip with File Loader at the very top */}
+      <div className="w-full px-4 flex items-center justify-between gap-2 z-10 border-b border-white/5 pb-2 mb-2">
+        <div className="flex flex-col min-w-0 flex-1 text-left">
+          <span className="text-[7.5px] font-black uppercase tracking-[0.2em] opacity-30">LOADED SOUND SOURCE</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span 
+              title={trackTitle || undefined}
+              className={`block truncate text-[10.5px] font-black font-mono uppercase ${id === 'A' ? 'text-blue-400' : 'text-purple-400'} w-full`}
+            >
+              {trackTitle || 'NO TRACK LOADED'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Direct manual file load button for this specific deck */}
+        <label className="flex items-center gap-1 px-2 py-1 text-[8.5px] font-bold uppercase tracking-wider rounded border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all cursor-pointer select-none">
+          <Upload size={10} className={id === 'A' ? 'text-blue-400' : 'text-purple-400'} />
+          <span>LOAD FILE</span>
+          <input 
+            type="file" 
+            className="hidden" 
+            accept="audio/*" 
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && onFileDrop) {
+                onFileDrop(file);
+              }
+            }} 
+          />
+        </label>
+      </div>
+
       {sourceType === 'EXTERNAL' && externalUrl && (
         <div className="absolute inset-0 z-40 bg-brand-deep/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center rounded-lg border border-white/10">
+          {onEject && (
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEject();
+              }}
+              title="Eject track and reset deck"
+              className="absolute top-3 right-3 p-1 rounded bg-red-950/40 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-95 text-[9px] font-black uppercase tracking-wider px-2.5 shadow-[0_4px_12px_rgba(239,68,68,0.2)]"
+            >
+              EJECT
+            </button>
+          )}
+
           <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 border border-blue-500/20 ${glowClass}`}>
             <ExternalLink size={24} />
           </div>
@@ -540,31 +1075,25 @@ export default function Deck({
           </div>
 
           <div className="w-full aspect-video bg-black rounded overflow-hidden border border-white/5 relative mb-6">
-            <Player 
-              url={externalUrl} 
-              playing={isPlaying}
-              volume={resolvedVolume}
-              controls={true}
-              playsinline={true}
-              width="100%"
-              height="100%"
-              style={{ position: 'absolute', top: 0, left: 0 }}
-              onReady={onPlayerReady}
-              onBuffer={onPlayerBuffer}
-              onBufferEnd={onPlayerReady}
-              onError={onPlayerReady}
-              config={{
-                youtube: {
-                  playerVars: {
-                    autoplay: 0,
-                    playsinline: 1,
-                    controls: 1,
-                    enablejsapi: 1,
-                    origin: window.location.origin
-                  }
-                }
-              }}
-            />
+            {ytId ? (
+              <div id={`yt-player-${id}`} className="absolute inset-0 w-full h-full" />
+            ) : spotifyEmbedUrl ? (
+              <iframe
+                src={spotifyEmbedUrl}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allowFullScreen={false}
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                className="absolute inset-0 w-full h-full"
+                title={`Spotify Player Deck ${id}`}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-[10px]">
+                Unsupported or invalid stream URL
+              </div>
+            )}
           </div>
 
           <div className="w-full flex justify-center mb-4">
@@ -572,8 +1101,11 @@ export default function Deck({
               <div className="flex items-center justify-center gap-1.5 text-amber-500 text-[9px] font-black uppercase tracking-wider">
                 <AlertTriangle size={12} className="animate-pulse" /> Iframe Sandbox Restrictions
               </div>
-              <p className="text-[10px] text-zinc-300 leading-normal max-w-xs">
-                Browsers block audio contexts and intercept clicks inside third-party embeds (like YouTube) when they are nested inside preview windows.
+              <p className="text-[10px] text-zinc-350 leading-normal max-w-xs">
+                Browsers block audio contexts inside third-party embeds (like YouTube) when nested in preview windows.
+              </p>
+              <p className="text-[10px] text-emerald-400 font-semibold leading-normal max-w-xs bg-emerald-950/20 px-2 py-1.5 rounded border border-emerald-500/10">
+                💡 TIP: Click directly on the video's native Play or Volume buttons inside the box above to immediately unblock full sound and auto-sync the deck!
               </p>
               <a 
                 href={window.location.href} 
@@ -610,18 +1142,33 @@ export default function Deck({
         </div>
       )}
 
-      {/* Header Loop Info */}
-      <div className="w-full px-4 flex justify-between items-center z-10">
+      {/* Header Deck Info Grid */}
+      <div className="w-full px-4 grid grid-cols-3 gap-2 items-center z-10 font-mono">
          <div className="flex flex-col">
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">Transport Area</span>
-            <div className="lcd-display text-[11px] font-bold text-brand-cyan min-w-[60px] text-center">
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">STATUS</span>
+            <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center truncate">
                {loop?.active ? 'LOOP ON' : (isLoading ? 'LOADING...' : (isPlaying ? 'PLAYING' : 'READY'))}
             </div>
          </div>
+
+         <div className="flex flex-col items-center">
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">TIME TRACKER</span>
+            <div className="lcd-display text-[10px] font-bold text-emerald-400 text-center tabular-nums font-mono tracking-tight flex flex-col items-center w-full">
+              <span>{formatTime(resolvedCurrentTime)} / {formatTime(resolvedDuration)}</span>
+              {/* Mini visual progress slider */}
+              <div className="w-16 h-1 bg-zinc-950/80 rounded-full overflow-hidden mt-0.5 border border-white/5">
+                <div 
+                  className={`h-full ${id === 'A' ? 'bg-blue-400' : 'bg-purple-400'} transition-all duration-100`}
+                  style={{ width: `${resolvedDuration > 0 ? (resolvedCurrentTime / resolvedDuration) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+         </div>
+
          <div className="flex flex-col items-end">
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">Playback Speed</span>
-            <div className="lcd-display text-[11px] font-bold text-brand-cyan min-w-[60px] text-center tabular-nums">
-               {((playbackRate - 1) * 100).toFixed(2)}%
+            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20 font-sans">SPEED / PITCH</span>
+            <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center tabular-nums">
+               {((playbackRate - 1) * 100).toFixed(1)}%
             </div>
          </div>
       </div>
@@ -691,18 +1238,17 @@ export default function Deck({
                     <button onClick={onClearCues} className="text-[6px] text-white/10 hover:text-red-500 uppercase font-black tracking-tighter">RESET</button>
                 </div>
                 <div className="grid grid-cols-2 grid-rows-2 gap-1.5">
-                    {[0, 1, 2, 3].map((i) => {
-                        const hasCue = hotCues[i] !== undefined;
-                        return (
-                            <button 
-                                key={i} 
-                                onClick={() => onHotCue?.(i)}
-                                className={`h-7 border rounded-sm transition-all tactile-button ${hasCue ? glowClass : 'bg-white/5 border-white/5 text-white/20 hover:bg-white/10'}`}
-                            >
-                                <span className="text-[8px] font-black">{i + 1}</span>
-                            </button>
-                        );
-                    })}
+                    {[0, 1, 2, 3].map((i) => (
+                        <HotCueButton
+                            key={i}
+                            index={i}
+                            hasCue={hotCues[i] !== undefined}
+                            cueTime={hotCues[i]}
+                            glowClass={glowClass}
+                            formatTime={formatTime}
+                            onHotCue={onHotCue}
+                        />
+                    ))}
                 </div>
             </div>
         </div>
@@ -713,167 +1259,309 @@ export default function Deck({
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute inset-x-2 top-2 bottom-16 bg-brand-panel/95 backdrop-blur-2xl border border-white/10 z-30 p-4 flex flex-col gap-4 rounded-lg shadow-2xl overflow-y-auto custom-scrollbar"
+            className="absolute inset-x-2 top-2 bottom-16 bg-[#0c0d10]/98 backdrop-blur-2xl border border-white/10 z-30 p-3.5 flex flex-col gap-3.5 rounded-lg shadow-2xl overflow-y-auto custom-scrollbar"
           >
              <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">SPECIALIZED FX ENGINE // {id}</div>
-                <button onClick={() => setShowAdvanced(false)} className="text-[8px] font-bold text-white/20 hover:text-white uppercase transition-colors px-1">Close</button>
+                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-white/40">CONSOLE DECK EXPANSION // {id}</div>
+                <button onClick={() => setShowAdvanced(false)} className="text-[8px] font-bold text-white/20 hover:text-white uppercase transition-colors px-1 pointer-events-auto">Close</button>
+             </div>
+
+             {/* Tab Toggle Control */}
+             <div className="flex bg-black/45 border border-white/5 p-1 rounded gap-1 flex-shrink-0">
+                <button 
+                  onClick={() => setAdvancedTab('FX')} 
+                  className={`flex-grow py-1.5 px-3 rounded text-[8px] font-black uppercase tracking-widest border transition-all text-center flex items-center justify-center gap-1.5 ${
+                    advancedTab === 'FX' 
+                      ? (id === 'A' 
+                        ? 'bg-brand-cyan/15 text-brand-cyan border-brand-cyan/20' 
+                        : 'bg-brand-purple/15 text-brand-purple border-brand-purple/20')
+                      : 'border-transparent text-white/30 hover:text-white/60 hover:bg-white/5'
+                  }`}
+                >
+                  🎛️ SPECIALIZED FX ENGINE
+                </button>
+                <button 
+                  onClick={() => setAdvancedTab('SAMPLER')} 
+                  className={`flex-grow py-1.5 px-3 rounded text-[8px] font-black uppercase tracking-widest border transition-all text-center flex items-center justify-center gap-1.5 ${
+                    advancedTab === 'SAMPLER' 
+                      ? (id === 'A' 
+                        ? 'bg-brand-cyan/15 text-brand-cyan border-brand-cyan/20' 
+                        : 'bg-brand-purple/15 text-brand-purple border-brand-purple/20')
+                      : 'border-transparent text-white/30 hover:text-white/60 hover:bg-white/5'
+                  }`}
+                >
+                  🎹 LIVE SYNTH & SAMPLER
+                </button>
              </div>
              
-             {/* Beat Rolls */}
-             <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="text-[7px] font-black uppercase tracking-widest text-white/20">Beat Roll / Repeat</div>
-                  {sourceType === 'EXTERNAL' && (
-                    <div className="text-[6px] font-black text-amber-500 uppercase tracking-widest leading-none bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-sm">Local Only</div>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                    {(['1/4', '1/8', '1/16'] as const).map((div) => (
-                        <button 
-                            key={div}
-                            onClick={() => {
-                              if (sourceType === 'EXTERNAL') return;
-                              if (activeRoll === div) {
-                                onRoll?.(null);
-                              } else {
-                                onRoll?.(div);
-                              }
-                            }}
+             {advancedTab === 'FX' ? (
+               <>
+                 {/* Beat Rolls */}
+                 <div className="space-y-2 flex-shrink-0">
+                    <div className="flex justify-between items-center">
+                      <div className="text-[7px] font-black uppercase tracking-widest text-white/20">Beat Roll / Repeat</div>
+                      {sourceType === 'EXTERNAL' && (
+                        <div className="text-[6px] font-black text-amber-500 uppercase tracking-widest leading-none bg-amber-500/10 border border-amber-500/20 px-1 py-0.5 rounded-sm">Local Only</div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {(['1/4', '1/8', '1/16'] as const).map((div) => (
+                            <button 
+                                key={div}
+                                onClick={() => {
+                                  if (sourceType === 'EXTERNAL') return;
+                                  if (activeRoll === div) {
+                                    onRoll?.(null);
+                                  } else {
+                                    onRoll?.(div);
+                                  }
+                                }}
 
-                            disabled={sourceType === 'EXTERNAL'}
-                            title={sourceType === 'EXTERNAL' ? "Beat rolls are not supported for YouTube/Spotify tracks" : `Toggle ${div} Beat Loop`}
-                            className={`h-8 rounded-sm border text-[8px] font-black transition-all tactile-button ${
-                              sourceType === 'EXTERNAL'
-                                ? 'bg-zinc-900/40 border-white/5 text-zinc-550/40 cursor-not-allowed opacity-40 select-none'
-                                : activeRoll === div 
-                                ? glowClass 
-                                : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'
-                            }`}
-                        >
-                            {div}
-                        </button>
+                                disabled={sourceType === 'EXTERNAL'}
+                                title={sourceType === 'EXTERNAL' ? "Beat rolls are not supported for YouTube/Spotify tracks" : `Toggle ${div} Beat Loop`}
+                                className={`h-8 rounded-sm border text-[8px] font-black transition-all tactile-button ${
+                                  sourceType === 'EXTERNAL'
+                                    ? 'bg-zinc-900/40 border-white/5 text-zinc-550/40 cursor-not-allowed opacity-40 select-none'
+                                    : activeRoll === div 
+                                    ? glowClass 
+                                    : 'bg-white/5 border-white/10 text-white/30 hover:bg-white/10'
+                                }`}
+                            >
+                                {div}
+                            </button>
+                        ))}
+                    </div>
+                 </div>
+                 {/* FX Layout View Selector */}
+                 <div className="flex gap-1 bg-black/40 border border-white/5 p-1 rounded-sm mt-1 flex-shrink-0">
+                    {(['KNOBS', 'SLIDERS', 'XY_PAD'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        onClick={() => setFxViewMode(mode)}
+                        className={`flex-1 py-1 text-[7px] font-black uppercase tracking-widest rounded-sm transition-all border ${
+                          fxViewMode === mode 
+                            ? (id === 'A' 
+                              ? 'bg-brand-cyan/25 text-brand-cyan border-brand-cyan/30 shadow-[0_0_8px_rgba(0,245,255,0.15)]' 
+                              : 'bg-brand-purple/25 text-brand-purple border-brand-purple/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]')
+                            : 'text-white/30 hover:text-white/60 hover:bg-white/5 border-transparent'
+                        }`}
+                      >
+                        {mode === 'XY_PAD' ? 'XY Pad' : mode}
+                      </button>
                     ))}
-                </div>
-             </div>
-             {/* FX Layout View Selector */}
-             <div className="flex gap-1 bg-black/40 border border-white/5 p-1 rounded-sm mt-1">
-                {(['KNOBS', 'SLIDERS', 'XY_PAD'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setFxViewMode(mode)}
-                    className={`flex-1 py-1 text-[7px] font-black uppercase tracking-widest rounded-sm transition-all border ${
-                      fxViewMode === mode 
-                        ? (id === 'A' 
-                          ? 'bg-brand-cyan/25 text-brand-cyan border-brand-cyan/30 shadow-[0_0_8px_rgba(0,245,255,0.15)]' 
-                          : 'bg-brand-purple/25 text-brand-purple border-brand-purple/30 shadow-[0_0_8px_rgba(168,85,247,0.15)]')
-                        : 'text-white/30 hover:text-white/60 hover:bg-white/5 border-transparent'
-                    }`}
-                  >
-                    {mode === 'XY_PAD' ? 'XY Pad' : mode}
-                  </button>
-                ))}
-             </div>
+                 </div>
 
-             {/* Dynamic FX Controls depending on chosen View Mode */}
-             {fxViewMode === 'KNOBS' && (
-               <div className="grid grid-cols-2 gap-4 flex-1 items-center">
-                  <Knob 
-                      label="ECHO"
-                      min={0}
-                      max={0.8}
-                      value={fx?.echo || 0} 
-                      onChange={(v) => onFxChange?.('echo', v)} 
-                      size="md"
-                      color={accentColor}
-                      defaultValue={0}
-                  />
-                  <Knob 
-                      label="FLAN"
-                      min={0}
-                      max={0.8}
-                      value={fx?.flanger || 0} 
-                      onChange={(v) => onFxChange?.('flanger', v)} 
-                      size="md"
-                      color={accentColor}
-                      defaultValue={0}
-                  />
-                  <Knob 
-                      label="BIT"
-                      min={0}
-                      max={1}
-                      value={fx?.crush || 0} 
-                      onChange={(v) => onFxChange?.('crush', v)} 
-                      size="md"
-                      color={accentColor}
-                      defaultValue={0}
-                  />
-                  <Knob 
-                      label="VERB"
-                      min={0}
-                      max={1}
-                      value={fx?.reverb || 0} 
-                      onChange={(v) => onFxChange?.('reverb', v)} 
-                      size="md"
-                      color={accentColor}
-                      defaultValue={0}
-                  />
+                 {/* Dynamic FX Controls depending on chosen View Mode */}
+                 {fxViewMode === 'KNOBS' && (
+                   <div className="grid grid-cols-2 gap-4 flex-1 items-center">
+                      <Knob 
+                          label="ECHO"
+                          min={0}
+                          max={0.8}
+                          value={fx?.echo || 0} 
+                          onChange={(v) => onFxChange?.('echo', v)} 
+                          size="md"
+                          color={accentColor}
+                          defaultValue={0}
+                      />
+                      <Knob 
+                          label="FLAN"
+                          min={0}
+                          max={0.8}
+                          value={fx?.flanger || 0} 
+                          onChange={(v) => onFxChange?.('flanger', v)} 
+                          size="md"
+                          color={accentColor}
+                          defaultValue={0}
+                      />
+                      <Knob 
+                          label="BIT"
+                          min={0}
+                          max={1}
+                          value={fx?.crush || 0} 
+                          onChange={(v) => onFxChange?.('crush', v)} 
+                          size="md"
+                          color={accentColor}
+                          defaultValue={0}
+                      />
+                      <Knob 
+                          label="VERB"
+                          min={0}
+                          max={1}
+                          value={fx?.reverb || 0} 
+                          onChange={(v) => onFxChange?.('reverb', v)} 
+                          size="md"
+                          color={accentColor}
+                          defaultValue={0}
+                      />
+                   </div>
+                 )}
+
+                 {fxViewMode === 'SLIDERS' && (
+                   <div className="grid grid-cols-4 gap-2 flex-1 items-stretch py-2">
+                      <InteractiveSlider 
+                          label="ECHO"
+                          min={0}
+                          max={0.8}
+                          value={fx?.echo || 0} 
+                          onChange={(v) => onFxChange?.('echo', v)} 
+                          color={accentColor}
+                      />
+                      <InteractiveSlider 
+                          label="FLAN"
+                          min={0}
+                          max={0.8}
+                          value={fx?.flanger || 0} 
+                          onChange={(v) => onFxChange?.('flanger', v)} 
+                          color={accentColor}
+                      />
+                      <InteractiveSlider 
+                          label="BIT"
+                          min={0}
+                          max={1}
+                          value={fx?.crush || 0} 
+                          onChange={(v) => onFxChange?.('crush', v)} 
+                          color={accentColor}
+                      />
+                      <InteractiveSlider 
+                          label="VERB"
+                          min={0}
+                          max={1}
+                          value={fx?.reverb || 0} 
+                          onChange={(v) => onFxChange?.('reverb', v)} 
+                          color={accentColor}
+                      />
+                   </div>
+                 )}
+
+                 {fxViewMode === 'XY_PAD' && (
+                   <div className="flex-1 py-1 flex flex-col justify-center">
+                     <XYPad 
+                       fx={fx} 
+                       onFxChange={onFxChange} 
+                       accentColor={accentColor} 
+                     />
+                   </div>
+                 )}
+                 
+                 <button 
+                    onClick={onSaveConfig}
+                    className="w-full py-2 bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-[8px] font-black uppercase tracking-widest hover:bg-brand-cyan/20 transition-all rounded tactile-button flex-shrink-0"
+                 >
+                    SAVE FX PRESET TO TRACK
+                 </button>
+               </>
+             ) : (
+               <div className="flex flex-col gap-3 flex-1 overflow-y-auto custom-scrollbar">
+                  {/* Procedural Synths (Trance & Techno) */}
+                  <div className="space-y-1.5">
+                     <div className="flex justify-between items-center px-0.5">
+                        <span className={`text-[7.5px] font-black uppercase tracking-widest font-mono ${id === 'A' ? 'text-brand-cyan' : 'text-brand-purple'}`}>🎹 LIVE PROCEDURAL SYNTHS</span>
+                        <span className="text-[6px] text-zinc-400 font-mono">0ms buffering</span>
+                     </div>
+                     <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          onClick={() => onPadTrigger('trance_stab')}
+                          className="h-12 rounded bg-cyan-600/10 hover:bg-cyan-600/15 border border-cyan-500/20 active:scale-95 transition-all p-2 flex flex-col justify-center items-start text-left group"
+                        >
+                           <span className="text-[8px] font-bold text-cyan-400 uppercase tracking-wide group-hover:text-cyan-300">TRANCE DETUNED STAB</span>
+                           <span className="text-[6.5px] font-mono text-zinc-400 leading-tight">Super-saw 5-note minor 9th chord shift</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('acid_line')}
+                          className="h-12 rounded bg-purple-600/10 hover:bg-purple-600/15 border border-purple-500/20 active:scale-95 transition-all p-2 flex flex-col justify-center items-start text-left group"
+                        >
+                           <span className="text-[8px] font-bold text-purple-400 uppercase tracking-wide group-hover:text-purple-300">ACID 303 CORE SEQUENCE</span>
+                           <span className="text-[6.5px] font-mono text-zinc-400 leading-tight">Resonant filter-swept arps</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('rave_siren')}
+                          className="h-12 rounded bg-amber-600/10 hover:bg-amber-600/15 border border-amber-500/20 active:scale-95 transition-all p-2 flex flex-col justify-center items-start text-left group"
+                        >
+                           <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wide group-hover:text-amber-300">RAVE LFO RISER</span>
+                           <span className="text-[6.5px] font-mono text-zinc-400 leading-tight">Vibrato siren sweep (0.2s - 1.2s)</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('sub_drop')}
+                          className="h-12 rounded bg-emerald-600/10 hover:bg-emerald-600/15 border border-emerald-500/20 active:scale-95 transition-all p-2 flex flex-col justify-center items-start text-left group"
+                        >
+                           <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wide group-hover:text-emerald-300">INFRA-SUB DROP</span>
+                           <span className="text-[6.5px] font-mono text-zinc-400 leading-tight">Heavy sub-bass sine drop down to 32Hz</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('noise_sweep')}
+                          className="h-12 rounded bg-indigo-600/10 hover:bg-indigo-600/15 border border-indigo-500/20 active:scale-95 transition-all p-2 flex flex-col justify-center items-start text-left group col-span-2"
+                        >
+                           <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-wide group-hover:text-indigo-300">WHITE NOISE transition UPLIFT</span>
+                           <span className="text-[6.5px] font-mono text-zinc-400 leading-tight">Bandpass sweep-rise over 1.5s with stereo reverb decay</span>
+                        </button>
+                     </div>
+                  </div>
+
+                  {/* Standard audio sampler grid */}
+                  <div className="space-y-1.5 m-0 pb-1">
+                     <div className={`text-[7.5px] font-black uppercase tracking-widest font-mono px-0.5 ${id === 'A' ? 'text-brand-cyan' : 'text-brand-purple'}`}>🥁 INSTANT LAUNCHER SAMPLER</div>
+                     <div className="grid grid-cols-4 gap-1.5">
+                        <button 
+                          onClick={() => onPadTrigger('kick')}
+                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                        >
+                           <span>KICK</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">DRUM</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('snare')}
+                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                        >
+                           <span>SNARE</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">DRUM</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('clap')}
+                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                        >
+                           <span>CLAP</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">SYNTH</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('hihat')}
+                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                        >
+                           <span>HI-HAT</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">CYMBAL</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('scratch')}
+                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                        >
+                           <span>SCRATCH</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">VINYL</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('fx_1')}
+                          className={`h-9 border border-zinc-700 bg-zinc-800 hover:bg-zinc-750 text-white rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none`}
+                        >
+                           <span>RISER</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">IMPACT</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('fx_2')}
+                          className={`h-9 border border-purple-800/40 bg-purple-950/20 text-purple-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-purple-900/10`}
+                        >
+                           <span>VOCAL HO!</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">"GO!"</span>
+                        </button>
+                        <button 
+                          onClick={() => onPadTrigger('fx_3')}
+                          className={`h-9 border border-blue-800/40 bg-blue-950/20 text-blue-400 rounded text-[8px] font-black uppercase tracking-wide transition-all active:scale-95 flex flex-col items-center justify-center leading-none hover:bg-blue-900/10`}
+                        >
+                           <span>LASER</span>
+                           <span className="text-[5.5px] opacity-30 mt-0.5">FX DROP</span>
+                        </button>
+                     </div>
+                  </div>
                </div>
              )}
-
-             {fxViewMode === 'SLIDERS' && (
-               <div className="grid grid-cols-4 gap-2 flex-1 items-stretch py-2">
-                  <InteractiveSlider 
-                      label="ECHO"
-                      min={0}
-                      max={0.8}
-                      value={fx?.echo || 0} 
-                      onChange={(v) => onFxChange?.('echo', v)} 
-                      color={accentColor}
-                  />
-                  <InteractiveSlider 
-                      label="FLAN"
-                      min={0}
-                      max={0.8}
-                      value={fx?.flanger || 0} 
-                      onChange={(v) => onFxChange?.('flanger', v)} 
-                      color={accentColor}
-                  />
-                  <InteractiveSlider 
-                      label="BIT"
-                      min={0}
-                      max={1}
-                      value={fx?.crush || 0} 
-                      onChange={(v) => onFxChange?.('crush', v)} 
-                      color={accentColor}
-                  />
-                  <InteractiveSlider 
-                      label="VERB"
-                      min={0}
-                      max={1}
-                      value={fx?.reverb || 0} 
-                      onChange={(v) => onFxChange?.('reverb', v)} 
-                      color={accentColor}
-                  />
-               </div>
-             )}
-
-             {fxViewMode === 'XY_PAD' && (
-               <div className="flex-1 py-1 flex flex-col justify-center">
-                 <XYPad 
-                   fx={fx} 
-                   onFxChange={onFxChange} 
-                   accentColor={accentColor} 
-                 />
-               </div>
-             )}
-             
-             <button 
-                onClick={onSaveConfig}
-                className="w-full py-2 bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-[8px] font-black uppercase tracking-widest hover:bg-brand-cyan/20 transition-all rounded tactile-button"
-             >
-                SAVE FX PRESET TO TRACK
-             </button>
           </motion.div>
       )}
 
@@ -946,7 +1634,7 @@ export default function Deck({
             <div className="flex gap-1.5 items-center justify-center">
                 {/* Fast Rewind button */}
                 <button 
-                    onClick={() => onScratchDrag?.(-10)}
+                    onClick={() => onSkip?.(-10)}
                     className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20 active:scale-95 transition-all text-[8px] font-black tactile-button"
                     title="Fast Rewind 10s"
                 >
@@ -977,7 +1665,7 @@ export default function Deck({
 
                 {/* Fast Forward button */}
                 <button 
-                    onClick={() => onScratchDrag?.(10)}
+                    onClick={() => onSkip?.(10)}
                     className="w-8 h-8 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 hover:border-white/20 active:scale-95 transition-all text-[8px] font-black tactile-button"
                     title="Fast Forward 10s"
                 >

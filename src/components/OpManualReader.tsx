@@ -43,7 +43,7 @@ export default function OpManualReader() {
         'Transport HUD: Shows active Waveform, remaining time in minutes/seconds, and active BPM.',
         'Jogwheels / Vinyl: Displays rotating slipmats. Click/tap and drag horizontally to dynamic-scratch or nudge.',
         'Tempo Slope Fader: Multi-percent pitch adjustment. Slide up or down to vary the deck\'s BPM manually.',
-        'Cue & Cup Points: Store up to three hot markers in real-time. Hit direct digits (1, 2, 3) to trigger jumping.',
+        'Hot Cues Quadrant (1, 2, 3, 4): Store up to 4 instant trigger markings per song. Tap an empty pad to write, tap again to instantly warp to that spot. Press and hold (0.7s) to invoke a clean red wiping overlay animation to delete a cue (paired with mobile haptic vibe!), or right-click to clear.',
         'Key Lock (MT): Activates professional Master Tempo pitch stabilization. Keeps vocal tracks in natural keys even at extreme speeds.'
       ]
     },
@@ -58,7 +58,8 @@ export default function OpManualReader() {
         'EQ Isolation Nodes: Real-time 3-band acoustic isolates. Kill high notes (Hi), warm frequencies (Mid), or bass beats (Low). Double-click/double-tap to instantly reset nodes back to flat (0dB).',
         'Isolator Filter Sweeps: Center rotary dial sweeps Low-pass filters (LPF, turn left to roll off highs) and High-pass filters (HPF, turn right to extract low clutter).',
         'Line Faders (CH A & CH B): Controls separate volume channels before cross-fader stages.',
-        'Asymmetrical Crossfader: Smooth physical slider at the very base. Links and morphs the relative volumes of Deck A and Deck B across a single horizontal axis.'
+        'Asymmetrical Crossfader: Smooth physical slider at the very base. Links and morphs the relative volumes of Deck A and Deck B across a single horizontal axis.',
+        'Touch Cohesion (Tablet Friendly): Complete conflict-free simultaneous touchscreen controls. Slide Channel A and B volumes or speed pitch controls in completely different directions at the same time with multiple fingers.'
       ],
       tips: [
         'Double-click or double-tap any rotary EQ or volume knob to quickly snap it back to its neutral 0 or default position.'

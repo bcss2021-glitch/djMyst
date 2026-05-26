@@ -34,11 +34,17 @@ export class AudioEngine {
   
   private playStartTime = { A: 0, B: 0 };
   private playOffset = { A: 0, B: 0 };
+  private lastScratchTime = { A: 0, B: 0 };
   private loopStartTime = { A: 0, B: 0 };
   private loopStartPos = { A: 0, B: 0 };
   private loopEndPos = { A: 0, B: 0 };
   
   private recorder: Tone.Recorder = new Tone.Recorder();
+
+  // Procedural synthesizer engines
+  private synth: Tone.PolySynth | null = null;
+  private delay: Tone.FeedbackDelay | null = null;
+  private acidSynth: Tone.MonoSynth | null = null;
 
   constructor() {
     this.deckA = new Tone.Player();
@@ -425,13 +431,11 @@ export class AudioEngine {
     }
   }
 
-  playPause(deck: 'A' | 'B') {
+  setPlaybackState(deck: 'A' | 'B', play: boolean) {
     const player = this.getDeck(deck);
-    if (player.state === 'started') {
-      this.playOffset[deck] += (Tone.now() - this.playStartTime[deck]) * player.playbackRate;
-      player.stop();
-    } else {
+    if (play) {
       try {
+        player.stop(); // Safe, force clean start from playOffset
         if (player.buffer && player.buffer.loaded && player.buffer.duration > 0) {
           this.playStartTime[deck] = Tone.now();
           player.start(undefined, this.playOffset[deck] % player.buffer.duration);
@@ -441,7 +445,17 @@ export class AudioEngine {
       } catch (e) {
         console.error(`Error starting deck ${deck}:`, e);
       }
+    } else {
+      if (player.state === 'started') {
+        this.playOffset[deck] += (Tone.now() - this.playStartTime[deck]) * player.playbackRate;
+      }
+      player.stop();
     }
+  }
+
+  playPause(deck: 'A' | 'B') {
+    const player = this.getDeck(deck);
+    this.setPlaybackState(deck, player.state !== 'started');
   }
 
   seek(deck: 'A' | 'B', time: number) {
@@ -620,15 +634,291 @@ export class AudioEngine {
   }
 
   triggerSample(name: string) {
+    if (name === 'trance_stab') {
+      if (!this.synth) {
+        this.delay = new Tone.FeedbackDelay("1/8n", 0.55).toDestination();
+        this.synth = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.005, decay: 0.35, sustain: 0.25, release: 0.5 }
+        });
+        this.synth.connect(this.delay);
+      }
+      const chords = [
+        ['D4', 'F4', 'A4', 'C5', 'E5'], // Dm9
+        ['G4', 'A#4', 'D5', 'F5', 'A5'], // Gm9
+        ['C4', 'D#4', 'G4', 'A#4', 'D5'], // Cm9
+        ['A#3', 'D4', 'F4', 'A4', 'C5']  // A#maj9
+      ];
+      const selected = chords[Math.floor(Math.random() * chords.length)];
+      try {
+        this.synth.triggerAttackRelease(selected, "8n");
+      } catch (e) {
+        console.warn(e);
+      }
+      return;
+    }
+
+    if (name === 'acid_line') {
+      if (!this.acidSynth) {
+        this.acidSynth = new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          filter: { Q: 8, type: "lowpass", rolloff: -12 },
+          envelope: { attack: 0.01, decay: 0.15, sustain: 0.3, release: 0.1 },
+          filterEnvelope: { attack: 0.01, decay: 0.22, baseFrequency: 130, octaves: 4.2, exponent: 2 }
+        }).toDestination();
+      }
+      const now = Tone.now();
+      const scale = ["C3", "D#3", "G3", "A#3", "C4", "A#3", "G3", "F3"];
+      const r1 = scale[Math.floor(Math.random() * scale.length)];
+      const r2 = scale[Math.floor(Math.random() * scale.length)];
+      const r3 = scale[Math.floor(Math.random() * scale.length)];
+      try {
+        this.acidSynth.triggerAttackRelease(r1, "16n", now);
+        this.acidSynth.triggerAttackRelease(r2, "16n", now + 0.12);
+        this.acidSynth.triggerAttackRelease(r3, "16n", now + 0.24);
+        this.acidSynth.triggerAttackRelease("C3", "16n", now + 0.36);
+      } catch (e) {
+        console.warn(e);
+      }
+      return;
+    }
+
+    if (name === 'rave_siren') {
+      try {
+        const osc = new Tone.Oscillator("sawtooth");
+        const filter = new Tone.Filter(1800, "lowpass").toDestination();
+        const gain = new Tone.Gain(0.12).toDestination();
+        osc.connect(filter);
+        filter.connect(gain);
+        
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 1.2);
+        
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0, now + 1.4);
+        
+        osc.start(now);
+        osc.stop(now + 1.4);
+      } catch (e) {
+        console.warn(e);
+      }
+      return;
+    }
+
+    if (name === 'sub_drop') {
+      try {
+        const osc = new Tone.Oscillator("sine");
+        const gain = new Tone.Gain(0.26).toDestination();
+        osc.connect(gain);
+        
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.exponentialRampToValueAtTime(32, now + 1.6);
+        
+        gain.gain.setValueAtTime(0.26, now);
+        gain.gain.linearRampToValueAtTime(0, now + 1.6);
+        
+        osc.start(now);
+        osc.stop(now + 1.6);
+      } catch (e) {
+        console.warn(e);
+      }
+      return;
+    }
+
+    if (name === 'noise_sweep') {
+      try {
+        const noise = new Tone.Noise("white");
+        const filter = new Tone.Filter({
+          type: "bandpass",
+          Q: 4.5,
+          frequency: 250
+        }).toDestination();
+        const gain = new Tone.Gain(0.14).toDestination();
+        noise.connect(filter);
+        filter.connect(gain);
+        
+        const now = Tone.now();
+        filter.frequency.setValueAtTime(250, now);
+        filter.frequency.exponentialRampToValueAtTime(7500, now + 1.5);
+        
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.linearRampToValueAtTime(0, now + 1.6);
+        
+        noise.start(now);
+        noise.stop(now + 1.6);
+      } catch (e) {
+        console.warn(e);
+      }
+      return;
+    }
+
     if (this.sampler.has(name)) {
       const player = this.sampler.player(name);
-      // Randomize pitch slightly for more natural repetition
-      if (name === 'scratch') {
-        player.playbackRate = 0.8 + Math.random() * 0.4;
-      } else {
-        player.playbackRate = 1;
+      let isLoaded = false;
+      try {
+        isLoaded = !!(player.buffer && player.buffer.loaded && player.buffer.duration > 0);
+      } catch (err) {}
+
+      if (isLoaded) {
+        try {
+          // Randomize pitch slightly for more natural repetition
+          if (name === 'scratch') {
+            player.playbackRate = 0.8 + Math.random() * 0.4;
+          } else {
+            player.playbackRate = 1;
+          }
+          player.start();
+          return;
+        } catch (e) {
+          console.warn(`Sampler player start failed for "${name}", using synth fallback:`, e);
+        }
       }
-      player.start();
+    }
+
+    // High-fidelity fallback synthesizer drum-kit if audio resources failed to load/CORS blocked
+    if (name === 'kick') {
+      try {
+        const osc = new Tone.Oscillator("sine");
+        const gain = new Tone.Gain(0.85).toDestination();
+        osc.connect(gain);
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(145, now);
+        osc.frequency.exponentialRampToValueAtTime(38, now + 0.12);
+        gain.gain.setValueAtTime(0.85, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'snare') {
+      try {
+        const osc = new Tone.Oscillator("triangle");
+        const noise = new Tone.Noise("white");
+        const filter = new Tone.Filter(1800, "highpass").toDestination();
+        const gainNoise = new Tone.Gain(0.18).connect(filter);
+        const gainOsc = new Tone.Gain(0.35).toDestination();
+        noise.connect(gainNoise);
+        osc.connect(gainOsc);
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(175, now);
+        gainOsc.gain.setValueAtTime(0.35, now);
+        gainOsc.gain.linearRampToValueAtTime(0, now + 0.11);
+        gainNoise.gain.setValueAtTime(0.18, now);
+        gainNoise.gain.linearRampToValueAtTime(0, now + 0.14);
+        osc.start(now);
+        noise.start(now);
+        osc.stop(now + 0.14);
+        noise.stop(now + 0.14);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'clap') {
+      try {
+        const noise = new Tone.Noise("pink");
+        const filter = new Tone.Filter(1400, "bandpass").toDestination();
+        const gain = new Tone.Gain(0.28).connect(filter);
+        noise.connect(gain);
+        const now = Tone.now();
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.02);
+        gain.gain.setValueAtTime(0.28, now + 0.024);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.044);
+        gain.gain.setValueAtTime(0.28, now + 0.048);
+        gain.gain.linearRampToValueAtTime(0, now + 0.13);
+        noise.start(now);
+        noise.stop(now + 0.14);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'hihat') {
+      try {
+        const noise = new Tone.Noise("white");
+        const filter = new Tone.Filter(7500, "highpass").toDestination();
+        const gain = new Tone.Gain(0.16).connect(filter);
+        noise.connect(gain);
+        const now = Tone.now();
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.045);
+        noise.start(now);
+        noise.stop(now + 0.05);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'scratch') {
+      try {
+        const noise = new Tone.Noise("pink");
+        const filter = new Tone.Filter(950, "bandpass").toDestination();
+        const gain = new Tone.Gain(0.32).connect(filter);
+        noise.connect(gain);
+        const now = Tone.now();
+        filter.frequency.setValueAtTime(350, now);
+        filter.frequency.linearRampToValueAtTime(1300, now + 0.075);
+        filter.frequency.linearRampToValueAtTime(550, now + 0.14);
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.14);
+        noise.start(now);
+        noise.stop(now + 0.15);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'fx_1') {
+      try {
+        const osc = new Tone.Oscillator("sawtooth");
+        const filter = new Tone.Filter(1100, "lowpass").toDestination();
+        const gain = new Tone.Gain(0.12).connect(filter);
+        osc.connect(gain);
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(1100, now + 1.1);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.linearRampToValueAtTime(0, now + 1.1);
+        osc.start(now);
+        osc.stop(now + 1.1);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'fx_2') {
+      try {
+        const osc = new Tone.Oscillator("sawtooth");
+        const filter = new Tone.Filter({ Q: 3.5, type: "bandpass", frequency: 750 }).toDestination();
+        const gain = new Tone.Gain(0.2).connect(filter);
+        osc.connect(gain);
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(105, now);
+        osc.frequency.linearRampToValueAtTime(210, now + 0.14);
+        filter.frequency.setValueAtTime(750, now);
+        filter.frequency.exponentialRampToValueAtTime(1700, now + 0.14);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } catch (e) { console.warn(e); }
+      return;
+    }
+
+    if (name === 'fx_3') {
+      try {
+        const osc = new Tone.Oscillator("sawtooth");
+        const gain = new Tone.Gain(0.16).toDestination();
+        osc.connect(gain);
+        const now = Tone.now();
+        osc.frequency.setValueAtTime(2400, now);
+        osc.frequency.exponentialRampToValueAtTime(140, now + 0.32);
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.32);
+        osc.start(now);
+        osc.stop(now + 0.32);
+      } catch (e) { console.warn(e); }
+      return;
     }
   }
 
@@ -665,9 +955,41 @@ export class AudioEngine {
       if (target < 0) target = 0;
       if (target > player.buffer.duration) target = player.buffer.duration - 0.05;
       
-      this.seek(deck, target);
+      this.playOffset[deck] = target;
+      
+      // Dynamic direction and playbackRate mapping for scratching realism
+      const isReverse = deltaSeconds < 0;
+      player.reverse = isReverse;
+      
+      const absDelta = Math.abs(deltaSeconds);
+      const rate = Math.max(0.3, Math.min(3.0, absDelta * 120));
+      player.playbackRate = rate;
+      
+      const now = Tone.now();
+      // Only stop and restart the player segment if at least 45ms has passed since the last trigger,
+      // or if the player is currently stopped. This prevents constant stop() calls cutting off the sound.
+      if (now - this.lastScratchTime[deck] > 0.045 || player.state !== 'started') {
+        player.stop();
+        this.playStartTime[deck] = now;
+        player.start(undefined, target % player.buffer.duration, 0.16); // slightly longer to blend
+        this.lastScratchTime[deck] = now;
+      }
+      
+      if (absDelta > 0.003) {
+        this.scratchWheel(absDelta * 18000);
+      }
     } catch (e) {
       console.warn(`Scratch seek bounds check error on deck ${deck}:`, e);
+    }
+  }
+
+  endScratch(deck: 'A' | 'B', isReversed: boolean) {
+    const player = this.getDeck(deck);
+    try {
+      player.reverse = isReversed;
+      this.applyRate(deck);
+    } catch (e) {
+      console.warn(`Error ending scratch mode on deck ${deck}:`, e);
     }
   }
 

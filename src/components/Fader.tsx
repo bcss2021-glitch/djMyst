@@ -27,27 +27,37 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    handleInteractionStart(e.clientX, e.clientY, false);
+    handleInteractionStart(e.clientX, e.clientY, null);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.cancelable) {
       e.preventDefault();
     }
-    const touch = e.touches[0];
-    handleInteractionStart(touch.clientX, touch.clientY, true);
+    const touch = e.changedTouches[0] || e.touches[0];
+    if (touch) {
+      handleInteractionStart(touch.clientX, touch.clientY, touch.identifier);
+    }
   };
 
-  const handleInteractionStart = (clientX: number, clientY: number, isTouchEvent: boolean) => {
+  const handleInteractionStart = (clientX: number, clientY: number, touchId: number | null) => {
+    const isTouchEvent = touchId !== null;
     updateValueFromCoords(clientX, clientY);
 
     const handleMove = (e: MouseEvent | TouchEvent) => {
       let currentX = 0;
       let currentY = 0;
       if ('touches' in e) {
-        if (e.touches.length > 0) {
-          currentX = e.touches[0].clientX;
-          currentY = e.touches[0].clientY;
+        let trackedTouch = null;
+        for (let i = 0; i < e.touches.length; i++) {
+          if (e.touches[i].identifier === touchId) {
+            trackedTouch = e.touches[i];
+            break;
+          }
+        }
+        if (trackedTouch) {
+          currentX = trackedTouch.clientX;
+          currentY = trackedTouch.clientY;
         } else {
           return;
         }
@@ -58,10 +68,29 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
       updateValueFromCoords(currentX, currentY);
     };
 
-    const handleEnd = () => {
-      if (isTouchEvent) {
-        window.removeEventListener('touchmove', handleMove);
-        window.removeEventListener('touchend', handleEnd);
+    const handleEnd = (e: MouseEvent | TouchEvent) => {
+      if (isTouchEvent && 'touches' in e) {
+        let isStillTracking = false;
+        for (let i = 0; i < e.touches.length; i++) {
+          if (e.touches[i].identifier === touchId) {
+            isStillTracking = true;
+            break;
+          }
+        }
+        let touchEnded = false;
+        if ('changedTouches' in e) {
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === touchId) {
+              touchEnded = true;
+              break;
+            }
+          }
+        }
+        if (!isStillTracking || touchEnded) {
+          window.removeEventListener('touchmove', handleMove);
+          window.removeEventListener('touchend', handleEnd);
+          window.removeEventListener('touchcancel', handleEnd);
+        }
       } else {
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleEnd);
@@ -71,6 +100,7 @@ export default function Fader({ value, onChange, vertical = true, label, classNa
     if (isTouchEvent) {
       window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleEnd);
+      window.addEventListener('touchcancel', handleEnd);
     } else {
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleEnd);

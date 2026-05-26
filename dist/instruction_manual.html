@@ -137,7 +137,6 @@
       <a href="#fx" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">06 // FX Engine & Rolls</a>
       <a href="#crate" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">07 // Sound Libraries</a>
       <a href="#masterclass" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">08 // Step-By-Step Mix</a>
-      <a href="#mobile" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">09 // Mobile App Compilation</a>
       
       <!-- Utility Warning Bezel -->
       <div class="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg space-y-2 mt-8">
@@ -380,7 +379,7 @@
               <li>By default, these squares are dim and display <strong class="text-white/30">empty</strong> values.</li>
               <li>While a song is playing, click any empty pad (e.g., <strong class="text-white/80">1</strong>). It will capture the exact microsecond and begin to <strong class="text-brand-cyan">glow in Deck A's color</strong>.</li>
               <li>Now, at any point in the set (even if playing or paused), clicking that glowing pad will <strong class="text-white font-bold">instantly warp</strong> you to that exact spot without pausing!</li>
-              <li>To clear a specific cue, <strong>press and hold the button for 0.7 seconds</strong>. You will see a red wiping progress overlay fill up the button; once it fills, the cue is saved empty (with a subtle haptic vibrate feedback on touchscreen devices!). You can also <strong>right-click</strong> the cue pad or tap the Red "RESET" button above the quadrant.</li>
+              <li>To clear these, click the red "<span class="text-red-400">RESET</span>" button located above the pads.</li>
             </ul>
           </div>
         </div>
@@ -450,28 +449,6 @@
             </p>
           </div>
         </div>
-
-        <!-- Touch & Gesture Integration Callout -->
-        <div class="p-5 bg-gradient-to-r from-indigo-500/5 to-cyan-500/5 rounded-xl border border-indigo-500/10 space-y-3 font-sans">
-          <div class="flex items-center gap-2 text-indigo-400 font-bold font-mono text-[10px] uppercase tracking-wider">
-            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11a5 5 0 00-10 0c0 1.05.18 2.059.513 3m.667-1.115l.07.103a11.952 11.952 0 001.1-2.103m-2.203-1.11a13.978 13.978 0 012.353-2.986m0 0a5 5 0 117.072 0m-7.072 0a13.947 13.947 0 011.662-2.18m2.18 2.18a13.953 13.953 0 012.18-1.662m-2.18 1.662a5.001 5.001 0 01-1.661 3.57m3.57-3.57a13.952 13.952 0 011.096-2.103"/></svg>
-            🚀 MULTI-TOUCH COHESION & GESTURE CALIBRATION
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-zinc-400 font-medium">
-            <div class="space-y-1">
-              <span class="text-white font-bold block">1. True Multi-Touch Independence</span>
-              <p class="leading-relaxed text-[11px]">
-                When operating on an iPad, Android tablet, or hybrid touchscreen laptop, you can <strong>move multiple controllers at the same time</strong> without conflicts. Slide the left volume fader up with your left thumb while dragging the right volume fader down with your right thumb! The console tracks separate finger identifiers independently.
-              </p>
-            </div>
-            <div class="space-y-1">
-              <span class="text-white font-bold block">2. Double-Click or Double-Tap to Reset</span>
-              <p class="leading-relaxed text-[11px]">
-                Need to instantly snap back to a neutral line or flat sound? <strong>Double-click</strong> or <strong>double-tap</strong> any rotary knob (such as EQ High, Mid, Low, or Filter) and fader handle to instantly snap it back to its neutral 0 or standard center point automatically. Excellent for fast sonic recoveries.
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <!-- section 6: FX engine -->
@@ -484,33 +461,26 @@
           Want to turn standard vocals into warehouse stadium spectacles? Tapping the small arrow button (Chevron) on the side of the Jogwheels rotates the controls to expose the <strong class="text-white">Specialized FX Engine Panel</strong>.
         </p>
 
-        <div class="space-y-4">
-          <div class="p-3 bg-brand-cyan/5 border border-brand-cyan/15 rounded-md text-zinc-300 font-mono text-[11px] leading-relaxed">
-            <span class="text-brand-cyan font-bold block mb-1">🎮 MULTI-MODE DECK INTERFACES</span>
-            Toggle between three specialized interactive layouts depending on your preferred tactile feedback style: <strong>Knobs</strong> (rotary dials), <strong>Sliders</strong> (vertical faders), and the <strong>XY Pad</strong> (a gesture touch surface).
-          </div>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- FX Control Layouts -->
-          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-4 font-mono text-xs">
-            <h4 class="text-brand-cyan font-display font-bold uppercase text-[10px] tracking-widest">TACTILE LAYOUTS & RECOVERY</h4>
-            <div class="space-y-3">
+          <!-- FX Knobs -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-3 font-mono text-xs">
+            <h4 class="text-brand-cyan font-display font-bold uppercase text-[10px] tracking-widest">FOUR TACTILE FX ISOLATORS</h4>
+            <div class="space-y-3 mt-2">
               <div>
-                <span class="text-zinc-100 font-bold">● DUAL SYSTEM KNOBS (KNOBS):</span>
-                <p class="text-zinc-400 text-[11px]">Default rotary dials for granular, precision adjustments. Click and drag vertically to rotate.</p>
+                <span class="text-zinc-100 font-bold">● ECHO:</span>
+                <p class="text-zinc-400 text-[11px]">Creates repeating delays that slowly break down. Great for fading out tracks on transition sections.</p>
               </div>
               <div>
-                <span class="text-zinc-100 font-bold">● PERFORMANCE FADERS (SLIDERS):</span>
-                <p class="text-zinc-400 text-[11px]">Converts FX controllers into vertical audio faders. Perfect for quick volume/intensity sweeps and visual level-matching.</p>
+                <span class="text-zinc-100 font-bold">● FLANGER (FLAN):</span>
+                <p class="text-zinc-400 text-[11px]">Takes slightly duplicated phase voice tracks to simulate a sweeping wind, jet-engine, or robotic whoosh effect.</p>
               </div>
               <div>
-                <span class="text-zinc-100 font-bold">● XY VECTOR CONTROLLER (XY PAD):</span>
-                <p class="text-zinc-400 text-[11px]">Sweeps <strong>Delay (Echo) on the X-axis</strong> and <strong>Phasing (Flanger) on the Y-axis</strong> simultaneously. Click/tap and drag to perform live cinematic space modulations.</p>
+                <span class="text-zinc-100 font-bold">● BITCRUSHER (BIT):</span>
+                <p class="text-zinc-400 text-[11px]">Reduces sampling resolution rate artificially. Gritty 8-bit digital sound, spectacular for industrial synth segments.</p>
               </div>
-              <div class="pt-2 border-t border-white/5">
-                <span class="text-brand-cyan font-bold">🎯 SPEED HYPER-RESET:</span>
-                <p class="text-zinc-400 text-[11px] mt-0.5">Need to instantly kill an effect? <strong>Double-click</strong> or <strong>double-tap</strong> any rotary knob or fader knob to snap its value instantly back to its safe zero default position.</p>
+              <div>
+                <span class="text-zinc-100 font-bold">● REVERB (VERB):</span>
+                <p class="text-zinc-400 text-[11px]">Creates spatial cavernous delay. Floods vocals into high-end wet stadium reverberations.</p>
               </div>
             </div>
           </div>
@@ -640,105 +610,14 @@
         </div>
       </section>
 
-      <!-- SECTION 09 -->
-      <section id="mobile" class="space-y-6 pt-10 border-t border-white/5">
-        <h3 class="text-white font-display font-medium text-lg leading-none tracking-tight flex items-center gap-3">
-          <span class="text-brand-cyan text-sm font-mono tracking-widest">09 //</span> 
-          MOBILE COMPILATION ENGINE
-        </h3>
-        <p class="text-zinc-400 text-xs">
-          Want to take the DJ Studio console on the road? The modern front-end build and pure client-side Web Audio DSP engine makes it highly compatible with cross-platform wrappers to launch natively on both Android and iOS devices.
-        </p>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- Capacitor Wrap -->
-          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-3 font-mono text-xs">
-            <h4 class="text-brand-cyan font-display font-bold uppercase text-[10px] tracking-widest">PREFERRED METHOD: CAPACITOR WRAPPER</h4>
-            <p class="text-zinc-400 text-[11px] leading-relaxed font-sans">
-              Capacitor (by Ionic) is the modern industry standard to compile React & Vite apps straight into native iOS and Android binaries.
-            </p>
-            <div class="space-y-2 text-[10.5px]">
-              <div>
-                <span class="text-white font-bold block">1. INGEST PACKAGES:</span>
-                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npm install @capacitor/core @capacitor/cli</code>
-              </div>
-              <div>
-                <span class="text-white font-bold block">2. INITIALIZE IN PROJECT:</span>
-                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npx cap init "DJ Studio" "com.dargonheart.djstudio" --web-dir=dist</code>
-              </div>
-              <div>
-                <span class="text-white font-bold block">3. INSTALL NATIVE ENGINES:</span>
-                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npm install @capacitor/android @capacitor/ios</code>
-              </div>
-              <div>
-                <span class="text-white font-bold block">4. COMPILE & SYNC BINARIES:</span>
-                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npm run build &amp;&amp; npx cap add android &amp;&amp; npx cap add ios &amp;&amp; npx cap sync</code>
-              </div>
-              <div>
-                <span class="text-white font-bold block">5. SPIN UP NATIVE IDE:</span>
-                <code class="text-indigo-400 block bg-black/40 px-2 py-1 rounded text-[10px] mt-1">npx cap open android (Android Studio) <br>npx cap open ios (Xcode)</code>
-              </div>
-            </div>
-          </div>
-
-          <!-- Cordova or PWA Alternatives -->
-          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-4 font-mono text-xs">
-            <h4 class="text-brand-purple font-display font-bold uppercase text-[10px] tracking-widest">ALTERNATIVE PIPELINES & PWAS</h4>
-            
-            <div class="space-y-2">
-              <span class="text-zinc-100 font-bold block">● PROGRESSIVE WEB APP (PWA):</span>
-              <p class="text-zinc-400 text-[11px] leading-relaxed font-sans">
-                You can add a standard service worker and manifest to compile this into a standalone PWA. This lets dual deck users click "Add to Home Screen" straight from Safari, Chrome, or Samsung Internet to run the console full-screen offline.
-              </p>
-            </div>
-
-            <div class="space-y-2 pt-2 border-t border-white/5">
-              <span class="text-zinc-100 font-bold block">● APACHE CORDOVA BUILD:</span>
-              <p class="text-zinc-400 text-[11px] leading-relaxed font-sans font-normal">
-                Older but highly stable package pipeline. To pack via Cordova, modify the <code class="text-brand-purple">vite.config.ts</code> base paths to utilize relative locations (<code class="text-brand-purple">base: './'</code>), configure the cordova <code class="text-zinc-200">config.xml</code>, and call <code class="text-zinc-300">cordova build android --release</code> to spit out a production-signed APK.
-              </p>
-            </div>
-
-            <div class="p-2 bg-yellow-500/5 border border-yellow-500/10 rounded-md text-[10px] text-zinc-400 font-sans">
-              <strong class="text-yellow-500 uppercase font-mono block mb-0.5">⚠️ WEB AUDIO LATENCY TIP:</strong>
-              Mobile Safari and Chrome restrict AudioContext playback until the user taps/clicks the canvas in any form. The application handles this natively with a primary touch/click detector!
-            </div>
-          </div>
-        </div>
-      </section>
-
     </div>
   </main>
 
   <!-- Footer block -->
   <footer class="border-t border-white/5 py-12 px-6 bg-[#0a0a0d] mt-24 text-center text-xs font-mono text-zinc-500">
-    <div class="max-w-4xl mx-auto space-y-6">
-      
-      <!-- Collaborative Engineering Credits -->
-      <div class="bg-[#050508] border border-white/5 p-6 rounded-lg text-left space-y-4 max-w-2xl mx-auto">
-        <span class="text-zinc-500 font-bold block tracking-widest text-[9px] uppercase border-b border-white/5 pb-2">COLLABORATIVE DESIGN & ENGINEERING LEADS</span>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div class="space-y-1">
-            <span class="text-brand-cyan font-bold block text-sm tracking-wide">DARGONHEART</span>
-            <a href="mailto:visiolucis2025@gmail.com" class="text-zinc-400 hover:text-brand-cyan transition-colors text-xs block">visiolucis2025@gmail.com</a>
-            <p class="text-zinc-500 text-[11px] mt-1 font-sans">
-              Lead concept director, master deck designer, custom FX architecture inventor, and live user experience supervisor.
-            </p>
-          </div>
-          <div class="space-y-1 border-t sm:border-y-0 sm:border-l border-white/5 pt-4 sm:pt-0 sm:pl-6">
-            <span class="text-brand-purple font-bold block text-sm tracking-wide">GEMINI</span>
-            <span class="text-zinc-400 block text-xs">Google AI Studio Build</span>
-            <p class="text-zinc-500 text-[11px] mt-1 font-sans">
-              Autonomous full-stack engineer and DSP audio integrator, implementing high-speed waveforms, live BPM analysis, and digital filtering.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="space-y-1 text-zinc-600">
-        <p>PRO-GRADE DUAL DECK DJ CONSOLE // INSTRUCTION & CALIBRATION REFERENCE FILE</p>
-        <p>Created in deep code-collaboration with precision and hardware integrity. All rights reserved.</p>
-      </div>
+    <div class="max-w-6xl mx-auto space-y-3">
+      <p>PRO-GRADE DUAL DECK DJ CONSOLE // INSTRUCTION & CALIBRATION REFERENCE FILE</p>
+      <p>Created with precision and hardware integrity. Review and test every dial directly on the live dashboard.</p>
     </div>
   </footer>
 

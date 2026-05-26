@@ -12,8 +12,11 @@
 
 @layer base {
   body {
-    @apply bg-brand-deep text-slate-400 selection:bg-brand-cyan selection:text-black overflow-hidden;
+    @apply bg-brand-deep text-slate-400 selection:bg-brand-cyan selection:text-black overflow-hidden select-none touch-none;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   /* Custom scrollbar */
