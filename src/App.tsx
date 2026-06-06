@@ -13,6 +13,7 @@ import Mixer from './components/Mixer';
 import Waveform from './components/Waveform';
 import Visualizer from './components/Visualizer';
 import OpManualReader from './components/OpManualReader';
+import AudioDebugger from './components/AudioDebugger';
 import { AudiusTrack, searchAudius, getAudiusStreamUrl } from './services/audius';
 
 interface TrackConfig {
@@ -2473,6 +2474,14 @@ export default function App() {
             )}
         </div>
       </footer>
+      <AudioDebugger 
+        playbackRates={playbackRates}
+        playingState={playingState}
+        fxState={fxState}
+        eqState={eqState}
+        trackInfo={trackInfo}
+        filterState={filterState}
+      />
     </div>
   );
 }
