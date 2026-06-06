@@ -2017,6 +2017,14 @@ export default function App() {
       );
     }
 
+    if (activeLibraryTab === 'MANUAL') {
+      return (
+        <div className="h-full flex flex-col min-h-0 overflow-hidden">
+          <OpManualReader />
+        </div>
+      );
+    }
+
     return null;
   };
 
