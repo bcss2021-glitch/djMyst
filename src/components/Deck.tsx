@@ -1294,9 +1294,9 @@ export default function Deck({
       </div>
 
       {/* Platter Area with Vertical Flow Controls next to JogWheel */}
-      <div className="flex items-center justify-center gap-2 sm:gap-4 relative w-full px-2 shrink-0 mt-0.5 mb-1 select-none">
+      <div className="flex portrait:grid portrait:grid-cols-2 landscape:flex items-center justify-center gap-2 sm:gap-4 relative w-full px-2 shrink-0 mt-0.5 mb-1 select-none">
           {/* Left Vertical Platter Controls */}
-          <div className="flex flex-col gap-1 shrink-0 z-10 items-center">
+          <div className="flex flex-col gap-1 shrink-0 z-10 items-center portrait:col-span-1 portrait:justify-self-end">
               <span className="text-[6.5px] font-bold text-zinc-500 uppercase tracking-widest">JOG MODE</span>
               <div className="flex flex-col gap-1 bg-black/60 p-1 rounded-md border border-white/5 text-[8px] font-mono font-bold w-12 sm:w-14">
                 <button
@@ -1338,7 +1338,7 @@ export default function Deck({
           </div>
 
           {/* Center JogWheel Disc */}
-          <div className="relative group flex flex-col items-center">
+          <div className="relative group flex flex-col items-center portrait:col-span-2 portrait:justify-self-center portrait:order-first">
               <JogWheel 
                   id={id}
                   playbackRate={playbackRate}
@@ -1368,7 +1368,7 @@ export default function Deck({
           </div>
 
           {/* Right Vertical Platter Controls */}
-          <div className="flex flex-col gap-1 shrink-0 z-10 items-center">
+          <div className="flex flex-col gap-1 shrink-0 z-10 items-center portrait:col-span-1 portrait:justify-self-start">
               <span className="text-[6.5px] font-bold text-zinc-500 uppercase tracking-widest">STYLE</span>
               <div className="flex flex-col gap-1 bg-black/60 p-1 rounded-md border border-white/5 text-[7.5px] font-mono font-bold w-12 sm:w-14">
                 {(['VINYL', 'CDJ', 'NEON'] as const).map((style) => (
