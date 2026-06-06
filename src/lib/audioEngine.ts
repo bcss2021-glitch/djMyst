@@ -15,8 +15,8 @@ export class AudioEngine {
   analyserB: Tone.Analyser;
   bitcrusherA: Tone.BitCrusher;
   bitcrusherB: Tone.BitCrusher;
-  reverbA: Tone.Reverb;
-  reverbB: Tone.Reverb;
+  reverbA: Tone.JCReverb;
+  reverbB: Tone.JCReverb;
   echoA: Tone.FeedbackDelay;
   echoB: Tone.FeedbackDelay;
   phaserA: Tone.Phaser;
@@ -68,7 +68,7 @@ export class AudioEngine {
   constructor() {
     this.deckA = new Tone.Player();
     this.deckB = new Tone.Player();
-    this.limiter = new Tone.Limiter(-1.5); // Add high-grade professional Limiter to prevent clipping scratchiness
+    this.limiter = new Tone.Limiter(-1.5); // high-grade limiter to catch rare peaks
     
     this.analyserA = new Tone.Analyser("fft", 64);
     this.analyserB = new Tone.Analyser("fft", 64);
@@ -77,27 +77,37 @@ export class AudioEngine {
     this.bitcrusherB = new Tone.BitCrusher(4);
     this.bitcrusherA.wet.value = 0;
     this.bitcrusherB.wet.value = 0;
+    (this.bitcrusherA as any).bypass = true;
+    (this.bitcrusherB as any).bypass = true;
 
-    this.reverbA = new Tone.Reverb(2);
-    this.reverbB = new Tone.Reverb(2);
+    // Use lightweight Schroeder/Moorer JCReverb to prevent async-compilation CPU spikes and pops
+    this.reverbA = new Tone.JCReverb(0.65);
+    this.reverbB = new Tone.JCReverb(0.65);
     this.reverbA.wet.value = 0;
     this.reverbB.wet.value = 0;
+    (this.reverbA as any).bypass = true;
+    (this.reverbB as any).bypass = true;
 
     this.echoA = new Tone.FeedbackDelay("1/4n", 0.5);
     this.echoB = new Tone.FeedbackDelay("1/4n", 0.5);
     this.echoA.wet.value = 0;
     this.echoB.wet.value = 0;
+    (this.echoA as any).bypass = true;
+    (this.echoB as any).bypass = true;
 
     this.phaserA = new Tone.Phaser({ frequency: 0.5, octaves: 3, baseFrequency: 1000 });
     this.phaserB = new Tone.Phaser({ frequency: 0.5, octaves: 3, baseFrequency: 1000 });
     this.phaserA.wet.value = 0;
     this.phaserB.wet.value = 0;
+    (this.phaserA as any).bypass = true;
+    (this.phaserB as any).bypass = true;
 
     this.pitchShiftA = new Tone.PitchShift(0);
     this.pitchShiftB = new Tone.PitchShift(0);
     
-    this.gainA = new Tone.Gain(1); // pre-fader trim gain
-    this.gainB = new Tone.Gain(1); // pre-fader trim gain
+    // Balanced pre-fader trim (0.707 = -3 dB) to build in absolute headroom for linear summing
+    this.gainA = new Tone.Gain(0.707);
+    this.gainB = new Tone.Gain(0.707);
 
     this.faderGainA = new Tone.Gain(0.33); // channel volumes
     this.faderGainB = new Tone.Gain(0.33);
@@ -116,17 +126,29 @@ export class AudioEngine {
       "fx_3": "https://cdn.pixabay.com/audio/2022/01/18/audio_824553d10c.mp3",
     }).toDestination();
     
-    this.eqA = new Tone.EQ3(0, 0, 0);
-    this.eqB = new Tone.EQ3(0, 0, 0);
+    // Set explicit professional crossover frequencies to prevent midrange cancellation
+    this.eqA = new Tone.EQ3({
+      low: 0,
+      mid: 0,
+      high: 0,
+      lowFrequency: 300,
+      highFrequency: 3200
+    });
+    this.eqB = new Tone.EQ3({
+      low: 0,
+      mid: 0,
+      high: 0,
+      lowFrequency: 300,
+      highFrequency: 3200
+    });
     
     this.filterA = new Tone.Filter(20000, "lowpass");
     this.filterB = new Tone.Filter(20000, "lowpass");
     
     // Explicit, deterministic, and highly-isolated step-by-step routing
-    // DECK A CONNECT SEQUENCE
+    // DB Note: pitchShift is bypassed initially by connecting gainA directly to eqA
     this.deckA.connect(this.gainA);
-    this.gainA.connect(this.pitchShiftA);
-    this.pitchShiftA.connect(this.eqA);
+    this.gainA.connect(this.eqA);
     this.eqA.connect(this.analyserA);
     this.analyserA.connect(this.bitcrusherA);
     this.bitcrusherA.connect(this.reverbA);
@@ -139,8 +161,7 @@ export class AudioEngine {
 
     // DECK B CONNECT SEQUENCE
     this.deckB.connect(this.gainB);
-    this.gainB.connect(this.pitchShiftB);
-    this.pitchShiftB.connect(this.eqB);
+    this.gainB.connect(this.eqB);
     this.eqB.connect(this.analyserB);
     this.analyserB.connect(this.bitcrusherB);
     this.bitcrusherB.connect(this.reverbB);
@@ -594,7 +615,8 @@ export class AudioEngine {
       case 'A': eq = this.eqA; break;
       case 'B': eq = this.eqB; break;
     }
-    eq[band].value = value;
+    // Prevent filter clicks/exploding signal levels via linear ramping
+    eq[band].rampTo(value, 0.05);
   }
 
   setFilter(deck: 'A' | 'B', value: number) {
@@ -606,10 +628,10 @@ export class AudioEngine {
     // -50 to 50 input
     if (value < 0) {
       filter.type = "lowpass";
-      filter.frequency.value = Tone.mtof((Tone.ftom(20000) as any) + value * 2); 
+      filter.frequency.rampTo(Tone.mtof((Tone.ftom(20000) as any) + value * 2), 0.05); 
     } else {
       filter.type = "highpass";
-      filter.frequency.value = value * 100;
+      filter.frequency.rampTo(value * 100, 0.05);
     }
   }
 
@@ -656,22 +678,45 @@ export class AudioEngine {
     this.applyRate(deck);
   }
 
+  private updateOffsetBeforeRateChange(deck: 'A' | 'B') {
+    const player = this.getDeck(deck);
+    if (player.state === 'started' && player.buffer && player.buffer.loaded) {
+      const now = Tone.now();
+      const elapsed = (now - this.playStartTime[deck]) * player.playbackRate;
+      this.playOffset[deck] = (this.playOffset[deck] + elapsed) % player.buffer.duration;
+      this.playStartTime[deck] = now;
+    }
+  }
+
   private applyRate(deck: 'A' | 'B') {
     const player = this.getDeck(deck);
     const pitchShift = deck === 'A' ? this.pitchShiftA : this.pitchShiftB;
     const keyLock = deck === 'A' ? this.keyLockA : this.keyLockB;
+    const eqNode = deck === 'A' ? this.eqA : this.eqB;
+    const gainNode = deck === 'A' ? this.gainA : this.gainB;
 
     try {
       if (player.buffer && player.buffer.loaded) {
+        // Safe playhead preservation to prevent audio skips and coordinate jumps
+        this.updateOffsetBeforeRateChange(deck);
+
         const rate = this.basePlaybackRates[deck] * this.bends[deck];
         player.playbackRate = rate;
 
-        if (keyLock) {
-          // Compensate pitch shift to keep original key
-          // semitones = 12 * log2(rate)
+        const needsPitchShift = keyLock && Math.abs(rate - 1.0) > 0.001;
+
+        // Surgical zero-overhead disconnect to guarantee no bubbly-vocoder artifacts when keylock or original rate is 1.0
+        gainNode.disconnect();
+        if (needsPitchShift) {
+          gainNode.connect(pitchShift);
+          pitchShift.disconnect();
+          pitchShift.connect(eqNode);
+          
           const semitones = 12 * Math.log2(rate);
           pitchShift.pitch = -semitones;
         } else {
+          gainNode.connect(eqNode);
+          pitchShift.disconnect();
           pitchShift.pitch = 0;
         }
       }
@@ -913,7 +958,7 @@ export class AudioEngine {
         }).toDestination();
       }
       try {
-        this.hihatSynth.triggerAttackRelease("16n");
+        this.hihatSynth.triggerAttackRelease("C6", "16n");
       } catch (e) {
         console.warn(e);
       }

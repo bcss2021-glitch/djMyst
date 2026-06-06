@@ -1034,18 +1034,20 @@ export default function Deck({
     return () => clearInterval(interval);
   }, [isPlaying, sourceType, extDuration, isYtReady]);
 
-  // Read native current position
+  // Read native current position with an optimized, lightweight interval when playing
   useEffect(() => {
     if (sourceType === 'EXTERNAL') return;
     
-    let animId: number;
-    const updateTime = () => {
+    // Smooth immediate sync on play state change or loading
+    setCurrentTime(audioEngine.getPosition(id));
+
+    if (!isPlaying) return;
+
+    const interval = setInterval(() => {
       setCurrentTime(audioEngine.getPosition(id));
-      animId = requestAnimationFrame(updateTime);
-    };
-    updateTime();
+    }, 100); // 10 updates per second is visually instantaneous for digital clocks/bars but 10x lower CPU!
     
-    return () => cancelAnimationFrame(animId);
+    return () => clearInterval(interval);
   }, [id, sourceType, isPlaying, trackUrl]);
 
   // Read native duration
