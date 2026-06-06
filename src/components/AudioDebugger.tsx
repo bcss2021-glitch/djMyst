@@ -39,6 +39,9 @@ export default function AudioDebugger({
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportLogsText, setExportLogsText] = useState('');
   const [modalCopied, setModalCopied] = useState(false);
+  const [sendToServerAllowed, setSendToServerAllowed] = useState<boolean>(() => {
+    return localStorage.getItem('sendToServerAllowed') === 'true';
+  });
   const noteInputRef = useRef<HTMLInputElement>(null);
 
   // Raw logs buffered in a ref to avoid React performance choke while playing
@@ -59,6 +62,10 @@ export default function AudioDebugger({
 
   // Helper: Flush the unsaved logs buffer to the backend Express server-side file
   const flushLogsToServer = async () => {
+    if (!sendToServerAllowed) {
+      unsavedLogsRef.current = [];
+      return;
+    }
     if (unsavedLogsRef.current.length === 0 || isFlushingRef.current) return;
     
     isFlushingRef.current = true;
@@ -464,27 +471,38 @@ export default function AudioDebugger({
                 <span className="text-blue-400">💾</span>
                 <span className="font-bold">FILE BACKED:</span>
                 <span className="bg-black/40 px-1.5 py-0.5 rounded text-[8px] text-indigo-300 border border-indigo-500/10">diagnostics_report.txt</span>
+                {!sendToServerAllowed && (
+                  <span className="text-[7.5px] text-amber-500 italic font-sans">(Muted: Send to Server Disabled)</span>
+                )}
               </div>
               <div className="flex items-center gap-1">
-                {fileSaveStatus === 'idle' && (
-                  <span className="text-slate-500 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> IDLE / READY
+                {!sendToServerAllowed ? (
+                  <span className="text-zinc-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-600"></span> MUTED / OFFLINE
                   </span>
-                )}
-                {fileSaveStatus === 'saving' && (
-                  <span className="text-[#3b82f6] flex items-center gap-1 animate-pulse font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span> AUTO-SAVING TO DISK...
-                  </span>
-                )}
-                {fileSaveStatus === 'saved' && (
-                  <span className="text-emerald-400 flex items-center gap-1 font-bold animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> COPIED ON DISK
-                  </span>
-                )}
-                {fileSaveStatus === 'error' && (
-                  <span className="text-red-400 flex items-center gap-1 font-bold animate-bounce">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span> DISK WRITE ERROR
-                  </span>
+                ) : (
+                  <>
+                    {fileSaveStatus === 'idle' && (
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> IDLE / READY
+                      </span>
+                    )}
+                    {fileSaveStatus === 'saving' && (
+                      <span className="text-[#3b82f6] flex items-center gap-1 animate-pulse font-bold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span> AUTO-SAVING TO DISK...
+                      </span>
+                    )}
+                    {fileSaveStatus === 'saved' && (
+                      <span className="text-emerald-400 flex items-center gap-1 font-bold animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> COPIED ON DISK
+                      </span>
+                    )}
+                    {fileSaveStatus === 'error' && (
+                      <span className="text-red-400 flex items-center gap-1 font-bold animate-bounce">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span> DISK WRITE ERROR
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -538,6 +556,48 @@ export default function AudioDebugger({
                     className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-red-500 border border-red-600 text-white text-[10px] font-black uppercase hover:bg-red-600 active:scale-95 shadow-[0_0_12px_rgba(239,68,68,0.3)] transition-all mt-1"
                   >
                     <AlertTriangle size={12} className="animate-bounce" /> Flag Distortion Event
+                  </button>
+                </div>
+              </div>
+
+              {/* SERVER TRANSMISSION CONSENT */}
+              <div className="p-3 rounded-lg bg-indigo-950/20 border border-indigo-500/20 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldAlert className="text-orange-400 stroke-[2.5]" size={13} />
+                    <span className="text-[9px] text-[#cbd5e1] font-mono tracking-widest uppercase font-black">
+                      REMOTE DIAGNOSTICS TRANSMISSION
+                    </span>
+                  </div>
+                  <span className={`text-[7.5px] font-mono px-1.5 py-0.5 rounded font-black ${sendToServerAllowed ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-pulse' : 'bg-zinc-800 text-zinc-400 border border-white/5'}`}>
+                    {sendToServerAllowed ? 'ACTIVE (OPT-IN)' : 'OFFLINE (PRIVATE)'}
+                  </span>
+                </div>
+                
+                <p className="text-[8.5px] text-slate-400 font-sans leading-normal">
+                  Toggle synchronizing diagnostic streams and audio performance events directly to the developer's server (<code className="bg-black/30 px-1 py-0.5 rounded text-[8px] text-indigo-300">diagnostics_report.txt</code>). Recording is fully off unless opted-in.
+                </p>
+
+                <div className="flex gap-2 items-center mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !sendToServerAllowed;
+                      setSendToServerAllowed(next);
+                      localStorage.setItem('sendToServerAllowed', String(next));
+                      if (next) {
+                        logMessage('SUCCESS', 'User enabled Remote Diagnostics Server-Sync reporting (OPT-IN Active).');
+                      } else {
+                        logMessage('INFO', 'User disabled Remote Diagnostics Server-Sync. Local data logging remains active.');
+                      }
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded text-[9.5px] font-mono font-black uppercase border cursor-pointer duration-150 transition-all ${
+                      sendToServerAllowed 
+                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30' 
+                        : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]'
+                    }`}
+                  >
+                    {sendToServerAllowed ? '❌ STOP SENDING TO SERVER (Go Offline)' : '🤝 ALLOW SENDING ERROR DATA TO DEVELOPER'}
                   </button>
                 </div>
               </div>

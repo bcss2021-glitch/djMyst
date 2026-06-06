@@ -11,7 +11,12 @@ interface ManualSection {
   deckAccent?: 'A' | 'B' | 'both';
 }
 
-export default function OpManualReader() {
+interface OpManualReaderProps {
+  showDiagnosticsWidget?: boolean;
+  onToggleDiagnostics?: (show: boolean) => void;
+}
+
+export default function OpManualReader({ showDiagnosticsWidget = true, onToggleDiagnostics }: OpManualReaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSection, setExpandedSection] = useState<string | null>('quickstart');
 
@@ -178,6 +183,28 @@ export default function OpManualReader() {
           />
         </div>
       </div>
+
+      {onToggleDiagnostics && (
+        <div className="mx-3 my-2 p-2 bg-[#121218] rounded border border-indigo-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${showDiagnosticsWidget ? 'bg-indigo-400 animate-pulse' : 'bg-zinc-650'}`}></span>
+            <span className="text-[10px] font-mono tracking-wide text-zinc-400 uppercase">
+              Floating Diagnostics Panel: <strong className={showDiagnosticsWidget ? 'text-indigo-450 font-black' : 'text-zinc-500'}>{showDiagnosticsWidget ? 'VISIBLE' : 'MUTED / HIDDEN'}</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onToggleDiagnostics(!showDiagnosticsWidget)}
+            className={`px-2.5 py-1 text-[8.5px] font-mono font-black uppercase rounded cursor-pointer transition-all duration-150 shrink-0 ${
+              showDiagnosticsWidget 
+                ? 'bg-zinc-850 hover:bg-zinc-800 text-zinc-300 border border-white/5' 
+                : 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.12)] animate-pulse'
+            }`}
+          >
+            {showDiagnosticsWidget ? '🙈 TEMPORARY HIDE FLOATING WIDGET' : '👁️ RESTORE FLOATING WIDGET'}
+          </button>
+        </div>
+      )}
 
       {/* Manual content reader */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 pb-24 space-y-3">

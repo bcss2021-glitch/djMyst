@@ -138,6 +138,9 @@ export default function App() {
 
   // Fullscreen view state & native app environment checks
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showDiagnosticsWidget, setShowDiagnosticsWidget] = useState<boolean>(() => {
+    return localStorage.getItem('showDiagnosticsWidget') !== 'false';
+  });
   const [showFullscreenToggle, setShowFullscreenToggle] = useState(true);
 
   useEffect(() => {
@@ -2020,7 +2023,13 @@ export default function App() {
     if (activeLibraryTab === 'MANUAL') {
       return (
         <div className="h-full flex flex-col min-h-0 overflow-hidden">
-          <OpManualReader />
+          <OpManualReader 
+            showDiagnosticsWidget={showDiagnosticsWidget}
+            onToggleDiagnostics={(val) => {
+              setShowDiagnosticsWidget(val);
+              localStorage.setItem('showDiagnosticsWidget', String(val));
+            }}
+          />
         </div>
       );
     }
@@ -3444,7 +3453,13 @@ export default function App() {
 
             {activeLibraryTab === 'MANUAL' && (
               <div className="flex-1 min-h-0 overflow-hidden">
-                <OpManualReader />
+                <OpManualReader 
+                  showDiagnosticsWidget={showDiagnosticsWidget}
+                  onToggleDiagnostics={(val) => {
+                    setShowDiagnosticsWidget(val);
+                    localStorage.setItem('showDiagnosticsWidget', String(val));
+                  }}
+                />
               </div>
             )}
 
@@ -3458,14 +3473,16 @@ export default function App() {
       )}
         </div> {/* Close inner container */}
       </div> {/* Close COLUMN OR SPLIT DOCK WRAPPER */}
-      <AudioDebugger 
-        playbackRates={playbackRates}
-        playingState={playingState}
-        fxState={fxState}
-        eqState={eqState}
-        trackInfo={trackInfo}
-        filterState={filterState}
-      />
+      {showDiagnosticsWidget && (
+        <AudioDebugger 
+          playbackRates={playbackRates}
+          playingState={playingState}
+          fxState={fxState}
+          eqState={eqState}
+          trackInfo={trackInfo}
+          filterState={filterState}
+        />
+      )}
     </div>
   );
 }

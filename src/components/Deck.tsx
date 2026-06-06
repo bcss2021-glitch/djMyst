@@ -1254,42 +1254,51 @@ export default function Deck({
         </div>
       )}
 
-      {/* Header Deck Info Grid */}
-      <div className="w-full px-3 grid grid-cols-3 gap-1.5 items-center z-10 font-mono shrink-0 mb-1">
-         <div className="flex flex-col">
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">STATUS</span>
-            <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center truncate">
-               {loop?.active ? 'LOOP ON' : (isLoading ? 'LOADING...' : (isPlaying ? 'PLAYING' : 'READY'))}
-            </div>
-         </div>
-
-         <div className="flex flex-col items-center">
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">TIME TRACKER</span>
-            <div className="lcd-display text-[10px] font-bold text-emerald-400 text-center tabular-nums font-mono tracking-tight flex flex-col items-center w-full">
-               <span>{formatTime(resolvedCurrentTime)} / {formatTime(resolvedDuration)}</span>
-               {/* Mini visual progress slider */}
-               <div className="w-16 h-1 bg-zinc-950/80 rounded-full overflow-hidden mt-0.5 border border-white/5">
-                 <div 
-                   className={`h-full ${id === 'A' ? 'bg-blue-400' : 'bg-purple-400'} transition-all duration-100`}
-                   style={{ width: `${resolvedDuration > 0 ? (resolvedCurrentTime / resolvedDuration) * 100 : 0}%` }}
-                 />
+      {/* Header Deck Info Tray - Unified Cohesive LCD Panel */}
+      <div className="w-full px-3 z-10 font-mono shrink-0 mb-2">
+         <div className="bg-black/80 border border-white/5 rounded-md shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.8)] p-2 grid grid-cols-3 gap-2 items-stretch min-h-[58px] select-none h-[58px]">
+            
+            {/* STATUS COLUMN */}
+            <div className="flex flex-col justify-between h-full">
+               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-500">STATUS</span>
+               <div className="text-[10px] sm:text-[11px] font-black text-brand-cyan text-left truncate flex-1 flex items-center">
+                  {loop?.active ? 'LOOP ON' : (isLoading ? 'LOADING...' : (isPlaying ? 'PLAYING' : 'READY'))}
                </div>
             </div>
-         </div>
 
-         <div className="flex flex-col items-end">
-            <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20 font-sans">SPEED / PITCH</span>
-            <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center tabular-nums flex flex-col items-end gap-0.5 min-w-[70px]">
-               <span>{((playbackRate - 1) * 100).toFixed(1)}%</span>
-               <span className="text-[7.5px] text-zinc-500 font-normal">BASE: {baseBpm.toFixed(0)} BPM</span>
+            {/* TIME TRACKER COLUMN */}
+            <div className="flex flex-col justify-between items-center h-full border-l border-r border-white/5 px-2">
+               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-500">TIME TRACKER</span>
+               <div className="text-[10px] sm:text-[11px] font-bold text-emerald-400 text-center tabular-nums leading-none flex flex-col items-center gap-1.5 flex-1 justify-center">
+                  <span>{formatTime(resolvedCurrentTime)} / {formatTime(resolvedDuration)}</span>
+                  {/* Mini visual progress slider */}
+                  <div className="w-16 h-1 bg-zinc-950/80 rounded-full overflow-hidden border border-white/5">
+                    <div 
+                      className={`h-full ${id === 'A' ? 'bg-blue-400' : 'bg-purple-400'} transition-all duration-100`}
+                      style={{ width: `${resolvedDuration > 0 ? (resolvedCurrentTime / resolvedDuration) * 100 : 0}%` }}
+                    />
+                  </div>
+               </div>
             </div>
-            <button
-              onClick={onBpmTap}
-              className="mt-0.5 px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[7px] font-black text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
-              title="Tap to the beat to set the BPM"
-            >
-              TAP BPM
-            </button>
+
+            {/* SPEED / PITCH COLUMN WITH TAP BPM */}
+            <div className="flex flex-col justify-between items-end h-full">
+               <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-500 text-right">SPEED / PITCH</span>
+               <div className="flex items-center gap-1.5 justify-end w-full flex-1 min-h-0">
+                  <div className="text-right tabular-nums flex flex-col items-end leading-tight justify-center">
+                     <span className="text-[10.5px] font-bold text-brand-cyan">{((playbackRate - 1) * 100).toFixed(1)}%</span>
+                     <span className="text-[6.5px] text-zinc-500 font-bold uppercase tracking-wider">BASE: {baseBpm.toFixed(0)} BPM</span>
+                  </div>
+                  <button
+                    onClick={onBpmTap}
+                    className="px-1.5 py-1 text-[7px] font-black rounded border border-white/10 bg-white/5 text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition-all uppercase tracking-widest cursor-pointer leading-none"
+                    title="Tap to the beat to set the BPM"
+                  >
+                    TAP
+                  </button>
+               </div>
+            </div>
+
          </div>
       </div>
 
