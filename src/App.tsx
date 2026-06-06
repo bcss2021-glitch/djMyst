@@ -31,6 +31,7 @@ interface SavedTrack {
   isAudius?: boolean;
   config?: TrackConfig;
   addedAt: number;
+  playedAt?: number;
 }
 
 interface SavedExternalLink {
@@ -63,6 +64,30 @@ export default function App() {
   const [browserHeight, setBrowserHeight] = useState(200);
   const [isTempExpanded, setIsTempExpanded] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [libraryDock, setLibraryDock] = useState<'BOTTOM' | 'LEFT_DOCK'>(() => {
+    try {
+      const saved = localStorage.getItem('dj_library_dock');
+      return (saved as 'BOTTOM' | 'LEFT_DOCK') || 'LEFT_DOCK';
+    } catch (_) {
+      return 'LEFT_DOCK';
+    }
+  });
+  const [isSideCollapsed, setIsSideCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('dj_side_collapsed') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('dj_sidebar_width');
+      return saved ? parseInt(saved, 10) : 340;
+    } catch (_) {
+      return 340;
+    }
+  });
+  const [isSideResizing, setIsSideResizing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [audiusTracks, setAudiusTracks] = useState<AudiusTrack[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -985,6 +1010,47 @@ export default function App() {
     setIsResizing(true);
   };
 
+  const handleSideResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsSideResizing(true);
+  };
+
+  const handleToggleLibraryDock = () => {
+    const nextDock = libraryDock === 'BOTTOM' ? 'LEFT_DOCK' : 'BOTTOM';
+    setLibraryDock(nextDock);
+    localStorage.setItem('dj_library_dock', nextDock);
+  };
+
+  const handleToggleSideCollapsed = () => {
+    const nextCollapsed = !isSideCollapsed;
+    setIsSideCollapsed(nextCollapsed);
+    localStorage.setItem('dj_side_collapsed', String(nextCollapsed));
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!isSideResizing) return;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const finalWidth = Math.max(240, Math.min(clientX, window.innerWidth * 0.6));
+      setSidebarWidth(finalWidth);
+      localStorage.setItem('dj_sidebar_width', String(finalWidth));
+    };
+
+    const handleEnd = () => setIsSideResizing(false);
+
+    if (isSideResizing) {
+      window.addEventListener('mousemove', handleMove);
+      window.addEventListener('mouseup', handleEnd);
+      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchend', handleEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, [isSideResizing]);
+
   useEffect(() => {
     const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!isResizing) return;
@@ -1022,6 +1088,626 @@ export default function App() {
       }
     } catch (_) {}
     return `${provider} Stream`;
+  };
+
+  const renderLibraryContent = (isSidebar: boolean) => {
+    const showCompact = isSidebar;
+
+    if (activeLibraryTab === 'FAVORITES') {
+      if (showCompact) {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 p-1 select-none">
+            {favorites.length > 0 ? favorites.map((track) => {
+               const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+               const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+               const isInPlaylist = playlist.some(p => p.id === track.id);
+               return (
+                 <div key={track.id} className={`p-2 bg-white/[0.01] hover:bg-white/[0.04] rounded-lg border border-white/5 flex flex-col gap-2 relative transition-all ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                   <div className="flex items-start justify-between gap-1">
+                     <div className="min-w-0 flex-1">
+                       <span className="text-[11px] font-bold text-zinc-200 truncate flex items-center gap-1">
+                         <Heart size={10} fill="#f43f5e" className="text-rose-500 shrink-0 inline" />
+                         {track.title}
+                       </span>
+                       <span className="text-[9px] text-zinc-500 block truncate mt-0.5">{track.artist}</span>
+                     </div>
+                     <div className="flex items-center gap-1 shrink-0">
+                       <button onClick={() => toggleFavorite(track)} className="p-1 rounded bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 cursor-pointer" title="Remove Favorite"><Trash2 size={10} /></button>
+                       <button onClick={() => addToPlaylist(track)} className={`p-1 rounded ${isInPlaylist ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-zinc-450 hover:text-white'}`} title="Add to Playlist"><ListPlus size={10} /></button>
+                     </div>
+                   </div>
+                   <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                     <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">FAVORITE</span>
+                     <div className="flex gap-1">
+                       <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-1.5 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/20 text-[8px] font-bold cursor-pointer">LOAD A</button>
+                       <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-1.5 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/20 text-[8px] font-bold cursor-pointer">LOAD B</button>
+                     </div>
+                   </div>
+                 </div>
+               );
+            }) : (
+               <div className="py-8 text-center text-zinc-500 italic font-mono text-[10px]">Your favorites will appear here. Heart a track to save it.</div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar select-none">
+            <table className="w-full text-left border-separate border-spacing-y-1">
+                <thead>
+                    <tr className="text-[9px] uppercase tracking-widest text-zinc-550">
+                        <th className="px-3 pb-2 font-black">Title</th>
+                        <th className="px-3 pb-2 font-black">Artist</th>
+                        <th className="px-3 pb-2 font-black">Actions / Load</th>
+                        <th className="px-3 pb-2 font-black hidden sm:table-cell">Details</th>
+                    </tr>
+                </thead>
+                <tbody className="text-[11px]">
+                    {favorites.length > 0 ? favorites.map(track => {
+                        const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+                        const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+                        return (
+                          <tr key={track.id} className={`group bg-rose-500/[0.01]/50 hover:bg-rose-500/[0.05] border-l border-transparent hover:border-rose-500/40 transition-all text-white/70 ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                              <td className="px-3 py-2 font-medium truncate max-w-[200px] flex items-center gap-2">
+                                <Heart size={10} fill="#f43f5e" className="text-rose-500 shrink-0" />
+                                {track.title}
+                              </td>
+                              <td className="px-3 py-2 text-white/40">{track.artist}</td>
+                              <td className="px-3 py-2">
+                                  <div className="flex gap-2">
+                                      <button onClick={() => toggleFavorite(track)} className="p-1.5 rounded bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-colors" title="Remove Favorite"><Trash2 size={12} /></button>
+                                      <button onClick={() => addToPlaylist(track)} className="p-1.5 rounded bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors" title="Add to Playlist"><ListPlus size={12} /></button>
+                                      <div className="w-[1px] bg-white/10 mx-1" />
+                                      <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40">LOAD A</button>
+                                      <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40">LOAD B</button>
+                                  </div>
+                              </td>
+                              <td className="px-3 py-2 font-mono text-white/20 hidden sm:table-cell"><Clock size={10} className="inline mr-1 opacity-40" /> FAVID</td>
+                          </tr>
+                        );
+                    }) : (
+                        <tr><td colSpan={4} className="py-12 text-center text-white/20 italic font-mono text-[10px]">Your favorites will appear here. Heart a track to save it.</td></tr>
+                    )}
+                </tbody>
+            </table>
+          </div>
+        );
+      }
+    }
+
+    if (activeLibraryTab === 'PLAYLIST') {
+      if (showCompact) {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 p-1 select-none">
+            {playlist.length > 0 ? playlist.map((track, idx) => {
+               const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+               const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+               const isFav = favorites.some(f => f.id === track.id);
+               return (
+                 <div key={`${track.id}-${idx}`} className={`p-2 bg-white/[0.01] hover:bg-white/[0.04] rounded-lg border border-white/5 flex flex-col gap-2 relative transition-all ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                   <div className="flex items-start justify-between gap-1">
+                     <div className="min-w-0 flex-1">
+                       <span className="text-[11px] font-bold text-zinc-200 truncate block">
+                         <span className="text-white/20 font-mono text-[9px] mr-1">{idx + 1}.</span>
+                         {track.title}
+                       </span>
+                       <span className="text-[9px] text-zinc-500 block truncate mt-0.5">{track.artist}</span>
+                     </div>
+                     <div className="flex items-center gap-0.5 shrink-0">
+                       <button disabled={idx === 0} onClick={() => movePlaylistItem(idx, 'up')} className="p-1 rounded bg-white/5 text-zinc-400 hover:text-white disabled:opacity-20 cursor-pointer"><ChevronUp size={10} /></button>
+                       <button disabled={idx === playlist.length - 1} onClick={() => movePlaylistItem(idx, 'down')} className="p-1 rounded bg-white/5 text-zinc-400 hover:text-white disabled:opacity-20 cursor-pointer"><ChevronDown size={10} /></button>
+                       <button onClick={() => removeFromPlaylist(track.id)} className="p-1 rounded bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 cursor-pointer" title="Remove"><Trash2 size={10} /></button>
+                       <button onClick={() => toggleFavorite(track)} className={`p-1 rounded ${isFav ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 text-zinc-400'} cursor-pointer`} title="Favorite"><Heart size={10} fill={isFav ? "currentColor" : "none"} /></button>
+                     </div>
+                   </div>
+                   <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                     <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">
+                       {track.config ? 'PRESET ON' : 'NO PRESET'}
+                     </span>
+                     <div className="flex gap-1">
+                       <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-1.5 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/20 text-[8px] font-bold cursor-pointer">LOAD A</button>
+                       <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-1.5 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/20 text-[8px] font-bold cursor-pointer">LOAD B</button>
+                     </div>
+                   </div>
+                 </div>
+               );
+            }) : (
+               <div className="py-8 text-center text-zinc-500 italic font-mono text-[10px]">Your mix playlist is empty. Add tracks to prepare your set.</div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar select-none">
+            <table className="w-full text-left border-separate border-spacing-y-1">
+                <thead>
+                    <tr className="text-[9px] uppercase tracking-widest text-zinc-550">
+                        <th className="px-3 pb-2 font-black">Title</th>
+                        <th className="px-3 pb-2 font-black">Artist</th>
+                        <th className="px-3 pb-2 font-black">Actions / Load</th>
+                        <th className="px-3 pb-2 font-black hidden sm:table-cell">Details</th>
+                    </tr>
+                </thead>
+                <tbody className="text-[11px]">
+                    {playlist.length > 0 ? playlist.map((track, idx) => {
+                        const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+                        const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+                        return (
+                          <tr key={`${track.id}-${idx}`} className={`group bg-purple-500/[0.02] hover:bg-purple-500/[0.05] border-l border-transparent hover:border-purple-500/40 transition-all text-white/70 ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                              <td className="px-3 py-2 font-medium truncate max-w-[200px] flex items-center gap-2">
+                                <span className="text-[8px] font-mono opacity-30">{idx + 1}.</span>
+                                {track.title}
+                              </td>
+                              <td className="px-3 py-2 text-white/40">{track.artist}</td>
+                              <td className="px-3 py-2">
+                                  <div className="flex gap-2">
+                                      <button 
+                                        disabled={idx === 0} 
+                                        onClick={() => movePlaylistItem(idx, 'up')} 
+                                        className="p-1.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer" 
+                                        title="Move Up"
+                                      >
+                                        <ChevronUp size={12} />
+                                      </button>
+                                      <button 
+                                        disabled={idx === playlist.length - 1} 
+                                        onClick={() => movePlaylistItem(idx, 'down')} 
+                                        className="p-1.5 rounded bg-white/5 text-white/40 hover:bg-white/10 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer" 
+                                        title="Move Down"
+                                      >
+                                        <ChevronDown size={12} />
+                                      </button>
+                                      <div className="w-[1px] bg-white/10 mx-0.5" />
+                                      <button onClick={() => removeFromPlaylist(track.id)} className="p-1.5 rounded bg-purple-500/10 text-purple-500 hover:bg-purple-500/20 transition-colors cursor-pointer" title="Remove from Playlist"><Trash2 size={12} /></button>
+                                      <button onClick={() => toggleFavorite(track)} className={`p-1.5 rounded transition-colors cursor-pointer ${favorites.find(f => f.id === track.id) ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} title="Toggle Favorite"><Heart size={12} fill={favorites.find(f => f.id === track.id) ? 'currentColor' : 'none'} /></button>
+                                      <div className="w-[1px] bg-white/10 mx-0.5" />
+                                      <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40 cursor-pointer">LOAD A</button>
+                                      <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40 cursor-pointer">LOAD B</button>
+                                  </div>
+                              </td>
+                              <td className="px-3 py-2 font-mono text-white/20 hidden sm:table-cell">
+                                {track.config ? (
+                                  <span className="text-green-500/60 flex items-center gap-1"><Save size={10} /> CONFIGURED</span>
+                                ) : (
+                                  <span className="opacity-40">NO PRESET</span>
+                                )}
+                              </td>
+                          </tr>
+                        );
+                    }) : (
+                        <tr><td colSpan={4} className="py-12 text-center text-white/20 italic font-mono text-[10px]">Your mix playlist is empty. Add tracks to prepare your set.</td></tr>
+                    )}
+                </tbody>
+            </table>
+          </div>
+        );
+      }
+    }
+
+    if (activeLibraryTab === 'OFFLINE_CRATE') {
+      return (
+        <div className="space-y-4 w-full flex-1 flex flex-col min-h-0 overflow-hidden select-none">
+            <div className={`p-3 rounded-lg bg-[#0F1416]/40 border border-teal-500/10 flex flex-col gap-3 shrink-0 ${showCompact ? 'items-stretch' : 'sm:flex-row sm:items-center justify-between'}`}>
+                <div className="text-left">
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-400">Offline Crate Storage</h4>
+                    {!showCompact && (
+                      <p className="text-[10px] text-zinc-400 leading-relaxed max-w-xl mt-0.5">
+                          Import and cache custom audio files directly in your browser's persistent IndexedDB cache database. These tracks remain available offline.
+                      </p>
+                    )}
+                </div>
+                <div className="flex-shrink-0">
+                    <input 
+                      type="file" 
+                      id="offline-crate-upload-input" 
+                      accept="audio/*" 
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const fileId = 'local_' + file.name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + file.size;
+                          try {
+                            await indexedDbCache.saveTrack(fileId, file.name, file.size, file.type, file);
+                            await refreshOfflineCrate();
+                          } catch (err: any) {
+                            alert("Failed to cache audio file: " + err.message);
+                          }
+                        }
+                      }} 
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => document.getElementById('offline-crate-upload-input')?.click()}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[9px] rounded bg-teal-500/15 border border-teal-500/30 text-teal-400 hover:bg-teal-500/25 active:scale-95 transition-all font-bold cursor-pointer font-sans"
+                    >
+                      <Plus size={11} /> ADD TRACK TO CRATE
+                    </button>
+                </div>
+            </div>
+
+            {showCompact ? (
+              <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5">
+                {cachedTracksMeta.length > 0 ? cachedTracksMeta.map((track) => {
+                   const trackFullId = 'indexeddb:' + track.id;
+                   const isCurrentlyA = trackInfo.A.id === trackFullId || trackInfo.A.url === trackFullId;
+                   const isCurrentlyB = trackInfo.B.id === trackFullId || trackInfo.B.url === trackFullId;
+                   const isFav = favorites.some(f => f.id === trackFullId);
+                   const isInPlaylist = playlist.some(p => p.id === trackFullId);
+                   return (
+                     <div key={track.id} className={`p-2 bg-white/[0.01]/50 hover:bg-white/[0.04] rounded-lg border border-white/5 flex flex-col gap-2 relative transition-all ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                       <div className="flex items-start justify-between gap-1">
+                         <div className="min-w-0 flex-1">
+                           <span className="text-[11px] font-bold text-zinc-200 truncate block leading-tight" title={track.name}>
+                             {track.name}
+                           </span>
+                           <span className="text-[9px] text-zinc-500 block mt-0.5">{(track.size / (1024 * 1024)).toFixed(1)} MB</span>
+                         </div>
+                         <div className="flex items-center gap-0.5 shrink-0">
+                           <button onClick={() => toggleFavorite({ id: trackFullId, title: track.name, artist: 'Local MP3', url: trackFullId })} className={`p-1 rounded ${isFav ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 text-zinc-400'} cursor-pointer`} title="Favorite"><Heart size={10} fill={isFav ? "currentColor" : "none"} /></button>
+                           <button onClick={() => addToPlaylist({ id: trackFullId, title: track.name, artist: 'Local MP3', url: trackFullId })} className={`p-1 rounded ${isInPlaylist ? 'bg-purple-500/10 text-purple-400' : 'bg-white/5 text-zinc-400'} cursor-pointer`} title="Add Playlist"><ListPlus size={10} /></button>
+                           <button onClick={async () => {
+                             if (window.confirm(`Delete ${track.name}?`)) {
+                               try {
+                                 await indexedDbCache.deleteTrack(track.id);
+                                 await refreshOfflineCrate();
+                               } catch (err: any) {
+                                 alert("Failed: " + err.message);
+                               }
+                             }
+                           }} className="p-1 rounded bg-white/5 text-zinc-450 hover:text-red-400 hover:bg-red-500/10 cursor-pointer"><Trash2 size={10} /></button>
+                         </div>
+                       </div>
+                       <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                         <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">OFFLINE</span>
+                         <div className="flex gap-1">
+                           <button onClick={() => loadTrack('A', track.name, trackFullId)} className="px-1.5 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/20 text-[8px] font-bold cursor-pointer">LOAD A</button>
+                           <button onClick={() => loadTrack('B', track.name, trackFullId)} className="px-1.5 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/20 text-[8px] font-bold cursor-pointer">LOAD B</button>
+                         </div>
+                       </div>
+                     </div>
+                   );
+                }) : (
+                  <div className="py-8 text-center text-zinc-500 italic text-[10px]">No offline files. Add MP3 files.</div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <table className="w-full text-left border-separate border-spacing-y-1">
+                    <thead>
+                        <tr className="text-[9px] uppercase tracking-widest text-zinc-550">
+                            <th className="px-3 pb-2 font-black">Track Name</th>
+                            <th className="px-3 pb-2 font-black">Size</th>
+                            <th className="px-3 pb-2 font-black">Actions / Load</th>
+                        </tr>
+                    </thead>
+                    <tbody className="text-[11px]">
+                        {cachedTracksMeta.length > 0 ? cachedTracksMeta.map((track) => {
+                            const trackFullId = 'indexeddb:' + track.id;
+                            const isCurrentlyA = trackInfo.A.id === trackFullId || trackInfo.A.url === trackFullId;
+                            const isCurrentlyB = trackInfo.B.id === trackFullId || trackInfo.B.url === trackFullId;
+                            const isFav = favorites.some(f => f.id === trackFullId);
+                            const isInPlaylist = playlist.some(p => p.id === trackFullId);
+                            return (
+                                <tr key={track.id} className={`group bg-white/[0.01] hover:bg-white/[0.03] transition-all text-white/70 ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                                    <td className="px-3 py-2 font-medium truncate max-w-[280px]" title={track.name}>
+                                      {track.name}
+                                    </td>
+                                    <td className="px-3 py-2 text-white/40 font-mono text-[10px]">
+                                      {(track.size / (1024 * 1024)).toFixed(1)} MB
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div className="flex gap-1.5 items-center">
+                                            <button onClick={() => toggleFavorite({ id: trackFullId, title: track.name, artist: 'Local MP3', url: trackFullId })} className={`p-1.5 rounded transition-colors cursor-pointer ${isFav ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} title="Toggle Favorite"><Heart size={12} fill={isFav ? 'currentColor' : 'none'} /></button>
+                                            <button onClick={() => addToPlaylist({ id: trackFullId, title: track.name, artist: 'Local MP3', url: trackFullId })} className={`p-1.5 rounded transition-colors cursor-pointer ${isInPlaylist ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`} title="Add to Playlist"><ListPlus size={12} /></button>
+                                            <button onClick={async () => {
+                                                if (window.confirm(`Delete ${track.name} from offline cache?`)) {
+                                                  try {
+                                                    await indexedDbCache.deleteTrack(track.id);
+                                                    await refreshOfflineCrate();
+                                                  } catch (err: any) {
+                                                    alert("Failed to delete track: " + err.message);
+                                                  }
+                                                }
+                                              }} className="p-1.5 rounded bg-white/5 text-white/45 hover:bg-red-500/20 hover:text-red-400 transition-colors cursor-pointer" title="Delete from cache"><Trash2 size={12} /></button>
+                                            <div className="w-[1px] bg-white/10 mx-1" />
+                                            <button onClick={() => loadTrack('A', track.name, trackFullId)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40 transition-all cursor-pointer">LOAD A</button>
+                                            <button onClick={() => loadTrack('B', track.name, trackFullId)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40 transition-all cursor-pointer">LOAD B</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        }) : (
+                            <tr><td colSpan={3} className="py-12 text-center text-white/20 italic font-mono text-[10px]">No tracks stored in offline cache.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+              </div>
+            )}
+        </div>
+      );
+    }
+
+    if (activeLibraryTab === 'CRATES') {
+      if (showCompact) {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 p-1 select-none">
+            {searchQuery && audiusTracks.length > 0 ? (
+              audiusTracks.map((track) => {
+                 const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.id;
+                 const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.id;
+                 const isFav = favorites.some(f => f.id === track.id);
+                 const isInPlaylist = playlist.some(p => p.id === track.id);
+                 return (
+                   <div key={track.id} className={`p-2 bg-white/[0.01]/50 hover:bg-white/[0.04] rounded-lg border border-white/5 flex flex-col gap-2 relative transition-all ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                     <div className="flex items-start justify-between gap-1">
+                       <div className="min-w-0 flex-1">
+                         <span className="text-[11px] font-bold text-zinc-200 block truncate leading-tight">{track.title}</span>
+                         <span className="text-[9px] text-zinc-500 block truncate mt-0.5">{track.user.name}</span>
+                       </div>
+                       <div className="flex items-center gap-0.5 shrink-0">
+                         <button onClick={() => toggleFavorite({ id: track.id, title: track.title, artist: track.user.name, url: track.id, isAudius: true })} className={`p-1 rounded ${isFav ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 text-zinc-400'} cursor-pointer`}><Heart size={10} fill={isFav ? "currentColor" : "none"} /></button>
+                         <button onClick={() => addToPlaylist({ id: track.id, title: track.title, artist: track.user.name, url: track.id, isAudius: true })} className={`p-1 rounded ${isInPlaylist ? 'bg-purple-500/10 text-purple-400' : 'bg-white/5 text-zinc-400'} cursor-pointer`}><ListPlus size={10} /></button>
+                       </div>
+                     </div>
+                     <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                       <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">
+                         {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
+                       </span>
+                       <div className="flex gap-1">
+                         <button onClick={() => loadTrack('A', track.title, track.id, true)} className="px-1.5 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/20 text-[8px] font-bold cursor-pointer">LOAD A</button>
+                         <button onClick={() => loadTrack('B', track.title, track.id, true)} className="px-1.5 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/20 text-[8px] font-bold cursor-pointer">LOAD B</button>
+                       </div>
+                     </div>
+                   </div>
+                 );
+              })
+            ) : (
+              DEFAULT_TRACKS.map((track) => {
+                 const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+                 const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+                 const isFav = favorites.some(f => f.id === track.id);
+                 const isInPlaylist = playlist.some(p => p.id === track.id);
+                 return (
+                   <div key={track.id} className={`p-2 bg-white/[0.01]/50 hover:bg-white/[0.04] rounded-lg border border-white/5 flex flex-col gap-2 relative transition-all ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                     <div className="flex items-start justify-between gap-1">
+                       <div className="min-w-0 flex-1">
+                         <span className="text-[11px] font-bold text-zinc-200 block truncate leading-tight">{track.name}</span>
+                         <span className="text-[9px] text-zinc-500 block truncate mt-0.5">System</span>
+                       </div>
+                       <div className="flex items-center gap-0.5 shrink-0">
+                         <button onClick={() => toggleFavorite({ id: track.id, title: track.name, artist: 'System', url: track.url })} className={`p-1 rounded ${isFav ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 text-zinc-400'} cursor-pointer`}><Heart size={10} fill={isFav ? "currentColor" : "none"} /></button>
+                         <button onClick={() => addToPlaylist({ id: track.id, title: track.name, artist: 'System', url: track.url })} className={`p-1 rounded ${isInPlaylist ? 'bg-purple-500/10 text-purple-400' : 'bg-white/5 text-zinc-400'} cursor-pointer`}><ListPlus size={10} /></button>
+                       </div>
+                     </div>
+                     <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                       <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">PIXABAY</span>
+                       <div className="flex gap-1">
+                         <button onClick={() => loadTrack('A', track.name, track.url)} className="px-1.5 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/20 text-[8px] font-bold cursor-pointer">LOAD A</button>
+                         <button onClick={() => loadTrack('B', track.name, track.url)} className="px-1.5 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/20 text-[8px] font-bold cursor-pointer">LOAD B</button>
+                       </div>
+                     </div>
+                   </div>
+                 );
+              })
+            )}
+            {searchQuery && audiusTracks.length === 0 && !isSearching && (
+              <div className="py-8 text-center text-zinc-500 italic text-[10px]">No tracks found for "{searchQuery}"</div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar select-none">
+            <table className="w-full text-left border-separate border-spacing-y-1">
+                <thead>
+                    <tr className="text-[9px] uppercase tracking-widest text-zinc-550">
+                        <th className="px-3 pb-2 font-black">Title</th>
+                        <th className="px-3 pb-2 font-black">Artist</th>
+                        <th className="px-3 pb-2 font-black">Actions / Load</th>
+                        <th className="px-3 pb-2 font-black hidden sm:table-cell">Details</th>
+                    </tr>
+                </thead>
+                <tbody className="text-[11px]">
+                    {searchQuery && audiusTracks.length > 0 ? (
+                        audiusTracks.map(track => {
+                            const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.id;
+                            const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.id;
+                            return (
+                              <tr key={track.id} className={`group bg-white/[0.02]/50 hover:bg-white/5 transition-all text-white/70 ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                                  <td className="px-3 py-2 font-medium truncate max-w-[200px]">{track.title}</td>
+                                  <td className="px-3 py-2 text-white/40">{track.user.name}</td>
+                                  <td className="px-3 py-2">
+                                      <div className="flex gap-1.5 items-center">
+                                          <button onClick={() => toggleFavorite({ id: track.id, title: track.title, artist: track.user.name, url: track.id, isAudius: true })} className={`p-1.5 rounded transition-colors ${favorites.find(f => f.id === track.id) ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}><Heart size={12} fill={favorites.find(f => f.id === track.id) ? 'currentColor' : 'none'} /></button>
+                                          <button onClick={() => addToPlaylist({ id: track.id, title: track.title, artist: track.user.name, url: track.id, isAudius: true })} className={`p-1.5 rounded transition-colors ${playlist.find(p => p.id === track.id) ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}><ListPlus size={12} /></button>
+                                          <div className="w-[1px] bg-white/10 mx-1" />
+                                          <button onClick={() => loadTrack('A', track.title, track.id, true)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold transition-all hover:bg-blue-600/40">{loadingState.A && trackInfo.A.id === track.id ? '...' : 'A'}</button>
+                                          <button onClick={() => loadTrack('B', track.title, track.id, true)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold transition-all hover:bg-purple-600/40">{loadingState.B && trackInfo.B.id === track.id ? '...' : 'B'}</button>
+                                      </div>
+                                  </td>
+                                  <td className="px-3 py-2 font-mono text-white/20 hidden sm:table-cell">{Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}</td>
+                              </tr>
+                            );
+                        })
+                    ) : (
+                        DEFAULT_TRACKS.map(track => {
+                            const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+                            const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+                            return (
+                              <tr key={track.id} className={`group bg-white/[0.02]/50 hover:bg-white/5 transition-all text-white/70 ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                                  <td className="px-3 py-2 font-medium">{track.name}</td>
+                                  <td className="px-3 py-2 text-white/40">System</td>
+                                  <td className="px-3 py-2">
+                                      <div className="flex gap-2 items-center">
+                                          <button onClick={() => toggleFavorite({ id: track.id, title: track.name, artist: 'System', url: track.url })} className={`p-1.5 rounded transition-colors ${favorites.find(f => f.id === track.id) ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}><Heart size={12} fill={favorites.find(f => f.id === track.id) ? 'currentColor' : 'none'} /></button>
+                                          <button onClick={() => addToPlaylist({ id: track.id, title: track.name, artist: 'System', url: track.url })} className={`p-1.5 rounded transition-colors ${playlist.find(p => p.id === track.id) ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}><ListPlus size={12} /></button>
+                                          <div className="w-[1px] bg-white/10 mx-1" />
+                                          <button onClick={() => loadTrack('A', track.name, track.url)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40">LOAD A</button>
+                                          <button onClick={() => loadTrack('B', track.name, track.url)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40">LOAD B</button>
+                                      </div>
+                                  </td>
+                                  <td className="px-3 py-2 font-mono text-white/20 hidden sm:table-cell">PIXABAY</td>
+                              </tr>
+                            );
+                        })
+                    )}
+                    {searchQuery && audiusTracks.length === 0 && !isSearching && (
+                        <tr>
+                            <td colSpan={4} className="py-8 text-center text-white/20 italic text-[10px]">No tracks found for "{searchQuery}"</td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+          </div>
+        );
+      }
+    }
+
+    if (activeLibraryTab === 'HISTORY') {
+      if (showCompact) {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 p-1 select-none">
+            {history.length > 0 ? history.map((track, idx) => {
+               const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+               const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+               const isFav = favorites.some(f => f.id === track.id);
+               const isInPlaylist = playlist.some(p => p.id === track.id);
+               return (
+                 <div key={`${track.id}-${idx}`} className={`p-2 bg-white/[0.01]/50 hover:bg-white/[0.04] rounded-lg border border-white/5 flex flex-col gap-2 relative transition-all ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.02]/50' : ''}`}>
+                   <div className="flex items-start justify-between gap-1">
+                     <div className="min-w-0 flex-1">
+                       <span className="text-[11px] font-bold text-zinc-200 block truncate leading-tight">{track.title}</span>
+                       <span className="text-[9px] text-zinc-500 block truncate mt-0.5">{track.artist}</span>
+                       {track.playedAt && (
+                         <span className="text-[8px] text-zinc-600 font-mono block mt-0.5">Played at {new Date(track.playedAt).toLocaleTimeString()}</span>
+                       )}
+                     </div>
+                     <div className="flex items-center gap-0.5 shrink-0">
+                       <button onClick={() => toggleFavorite(track)} className={`p-1 rounded ${isFav ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 text-zinc-400'} cursor-pointer`}><Heart size={10} fill={isFav ? "currentColor" : "none"} /></button>
+                       <button onClick={() => addToPlaylist(track)} className={`p-1 rounded ${isInPlaylist ? 'bg-purple-500/10 text-purple-400' : 'bg-white/5 text-zinc-400'} cursor-pointer`}><ListPlus size={10} /></button>
+                     </div>
+                   </div>
+                   <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+                     <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-tighter">HISTORIC</span>
+                     <div className="flex gap-1">
+                       <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-1.5 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/20 text-[8px] font-bold cursor-pointer">LOAD A</button>
+                       <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-1.5 py-0.5 rounded bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/20 text-[8px] font-bold cursor-pointer">LOAD B</button>
+                     </div>
+                   </div>
+                 </div>
+               );
+            }) : (
+               <div className="py-8 text-center text-zinc-500 italic font-mono text-[10px]">Your play history is empty.</div>
+            )}
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex-1 overflow-y-auto custom-scrollbar select-none">
+            <table className="w-full text-left border-separate border-spacing-y-1">
+                <thead>
+                    <tr className="text-[9px] uppercase tracking-widest text-zinc-550">
+                        <th className="px-3 pb-2 font-black">Title</th>
+                        <th className="px-3 pb-2 font-black">Artist</th>
+                        <th className="px-3 pb-2 font-black">Actions / Load</th>
+                        <th className="px-3 pb-2 font-black hidden sm:table-cell">Played At</th>
+                    </tr>
+                </thead>
+                <tbody className="text-[11px]">
+                    {history.length > 0 ? history.map((track, idx) => {
+                        const isCurrentlyA = trackInfo.A.id === track.id || trackInfo.A.url === track.url;
+                        const isCurrentlyB = trackInfo.B.id === track.id || trackInfo.B.url === track.url;
+                        return (
+                          <tr key={`${track.id}-${idx}`} className={`group bg-[#121218]/20 hover:bg-white/[0.04] transition-all text-white/70 ${isCurrentlyA ? 'border-l-2 border-l-blue-500 bg-blue-500/[0.02]/50' : isCurrentlyB ? 'border-l-2 border-l-purple-500 bg-purple-500/[0.03]/50' : ''}`}>
+                              <td className="px-3 py-2 font-medium truncate max-w-[200px]">{track.title}</td>
+                              <td className="px-3 py-2 text-white/40">{track.artist}</td>
+                              <td className="px-3 py-2">
+                                  <div className="flex gap-2">
+                                      <button onClick={() => toggleFavorite(track)} className={`p-1.5 rounded transition-colors cursor-pointer ${favorites.find(f => f.id === track.id) ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}><Heart size={12} fill={favorites.find(f => f.id === track.id) ? 'currentColor' : 'none'} /></button>
+                                      <button onClick={() => addToPlaylist(track)} className={`p-1.5 rounded transition-colors cursor-pointer ${playlist.find(p => p.id === track.id) ? 'bg-purple-500/20 text-purple-500' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}><ListPlus size={12} /></button>
+                                      <div className="w-[1px] bg-white/10 mx-0.5" />
+                                      <button onClick={() => loadTrack('A', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-bold hover:bg-blue-600/40 cursor-pointer">LOAD A</button>
+                                      <button onClick={() => loadTrack('B', track.title, track.id, track.isAudius, track.config)} className="px-2 py-0.5 rounded bg-purple-600/20 text-purple-400 border border-purple-500/30 text-[9px] font-bold hover:bg-purple-600/40 cursor-pointer">LOAD B</button>
+                                  </div>
+                              </td>
+                              <td className="px-3 py-2 font-mono text-white/20 hidden sm:table-cell">
+                                {track.playedAt ? new Date(track.playedAt).toLocaleTimeString() : 'N/A'}
+                              </td>
+                          </tr>
+                        );
+                    }) : (
+                        <tr><td colSpan={4} className="py-12 text-center text-white/20 italic font-mono text-[10px]">Your history is empty. Tracks you load will be recorded.</td></tr>
+                    )}
+                </tbody>
+            </table>
+          </div>
+        );
+      }
+    }
+
+    if (activeLibraryTab === 'YOUTUBE' || activeLibraryTab === 'SPOTIFY') {
+      return (
+        <div className={`h-full flex flex-col gap-4 text-left p-3 overflow-y-auto custom-scrollbar ${showCompact ? 'items-stretch' : 'sm:flex-row items-center justify-center p-6'}`}>
+            <div className={`rounded-full flex items-center justify-center shrink-0 ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'} ${showCompact ? 'w-10 h-10 mx-auto' : 'w-16 h-16'}`}>
+              <Music size={showCompact ? 16 : 28} />
+            </div>
+            <div className={`flex-1 space-y-2 shrink-0 ${showCompact ? 'text-center' : 'text-left max-w-sm'}`}>
+              <h3 className="text-xs font-bold uppercase tracking-wider">{activeLibraryTab} External Link</h3>
+              {!showCompact && (
+                <p className="text-[10px] text-white/40 leading-relaxed font-sans select-none">
+                  Paste a {activeLibraryTab} link below to load it into a deck. 
+                </p>
+              )}
+              
+              <div className="space-y-2 mt-2 select-none">
+                <input 
+                  type="text" 
+                  value={externalUrlInput}
+                  onChange={(e) => setExternalUrlInput(e.target.value)}
+                  placeholder={`Enter ${activeLibraryTab} URL...`}
+                  className="w-full bg-[#121218] border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-white/20 font-mono"
+                />
+                <input 
+                   type="text"
+                   value={externalTitleInput}
+                   onChange={(e) => setExternalTitleInput(e.target.value)}
+                   placeholder="Enter Custom Track Title (Optional)..."
+                   className="w-full bg-[#121218] border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-zinc-655 focus:outline-none focus:border-white/20 font-mono"
+                />
+                
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      handleLoadExternalLink('A', externalUrlInput);
+                    }}
+                    className={`flex-1 py-1 px-3 text-[9px] font-bold rounded cursor-pointer transition-all uppercase focus:outline-none ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-green-600 text-white hover:bg-green-500'}`}
+                  >
+                    Load Deck A
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleLoadExternalLink('B', externalUrlInput);
+                    }}
+                    className={`flex-1 py-1 px-3 text-[9px] font-bold rounded cursor-pointer transition-all uppercase focus:outline-none ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-green-600 text-white hover:bg-green-500'}`}
+                  >
+                    Load Deck B
+                  </button>
+                </div>
+              </div>
+
+              {!showCompact && (
+                <div className="p-2 border border-yellow-500/10 bg-yellow-500/[0.02] rounded-lg text-[9px] text-yellow-500/70 font-sans leading-relaxed flex flex-col gap-1 select-none">
+                  <span className="font-bold flex items-center gap-1"><Info size={10} /> CONNECTION NOTICE:</span>
+                  <span>
+                    While track loading and animated waveforms are mapped, live audio playback for {activeLibraryTab === 'YOUTUBE' ? 'YouTube' : 'Spotify'} streams within sandbox iframe containers is currently a work in progress.
+                  </span>
+                </div>
+              )}
+            </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const handleLoadExternalLink = (deck: 'A' | 'B', url: string, customTitle?: string) => {
@@ -1524,8 +2210,174 @@ export default function App() {
         ))}
       </section>
 
-      {/* MAIN CONTROLLER SURFACE */}
-      <main className="flex-1 relative overflow-hidden bg-black/20">
+      {/* COLUMN OR SPLIT DOCK WRAPPER */}
+      <div className={`flex-1 flex overflow-hidden min-h-0 relative w-full ${libraryDock === 'LEFT_DOCK' ? 'flex-row' : 'flex-col'}`}>
+        {libraryDock === 'LEFT_DOCK' && (
+          /* Render SIDEBAR LIBRARY */
+          <aside 
+            style={{ width: isSideCollapsed ? '52px' : `${sidebarWidth}px` }}
+            className="h-full bg-[#08080C] border-r border-white/10 flex flex-row flex-shrink-0 transition-[width] duration-300 ease-in-out relative z-40"
+          >
+            {/* Splitter on the right edge */}
+            {!isSideCollapsed && (
+              <div 
+                onMouseDown={handleSideResizeStart}
+                onTouchStart={handleSideResizeStart}
+                className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-blue-500/30 active:bg-blue-500/50 z-50 transition-all flex items-center justify-center group"
+                title="Drag to resize sidebar"
+              >
+                <div className="w-[1px] h-12 bg-white/5 group-hover:bg-blue-400/40 group-active:bg-blue-400" />
+              </div>
+            )}
+
+            {/* Left strip: Vertical Tab Strip (Width = 52px) */}
+            <div className="w-[52px] bg-[#0A0A0F] border-r border-white/5 flex flex-col items-center py-3 gap-2.5 flex-shrink-0 select-none">
+              {/* Collapse/Expand Toggle */}
+              <button 
+                onClick={handleToggleSideCollapsed}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all cursor-pointer shadow"
+                title={isSideCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              >
+                {isSideCollapsed ? <Maximize2 size={12} /> : <ChevronDown className="rotate-90" size={14} />}
+              </button>
+
+              {/* Toggle to Bottom Dock button */}
+              <button 
+                onClick={handleToggleLibraryDock}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/40 hover:text-blue-400 transition-all cursor-pointer shadow"
+                title="Dock to Bottom (Portrait Optimization)"
+              >
+                <LayoutGrid size={12} className="rotate-90" />
+              </button>
+
+              <div className="w-6 h-[1px] bg-white/5 my-1" />
+
+              {/* Vertical tabs selection */}
+              {[
+                { tab: 'CRATES', icon: <Disc3 size={14} />, color: 'blue-500', name: 'Crates & System' },
+                { tab: 'PLAYLIST', icon: <List size={14} />, color: 'purple-500', name: `Playlist (${playlist.length})` },
+                { tab: 'FAVORITES', icon: <Heart size={14} />, color: 'rose-500', name: `Favorites (${favorites.length})` },
+                { tab: 'HISTORY', icon: <Clock size={14} />, color: 'orange-500', name: 'History' },
+                { tab: 'MANUAL', icon: <BookOpen size={14} />, color: 'indigo-500', name: 'Manual Instructions' },
+                { tab: 'YOUTUBE', icon: <Music size={14} className="text-red-500" />, color: 'red-500', name: 'YouTube URL' },
+                { tab: 'SPOTIFY', icon: <Music size={14} className="text-green-500" />, color: 'green-500', name: 'Spotify URL' },
+                { tab: 'OFFLINE_CRATE', icon: <Database size={14} className="text-teal-400" />, color: 'teal-400', name: 'Offline Storage' },
+              ].map(({ tab, icon, color, name }) => {
+                const isActive = activeLibraryTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      setActiveLibraryTab(tab as any);
+                      if (isSideCollapsed) setIsSideCollapsed(false);
+                    }}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border relative group ${
+                      isActive 
+                        ? 'bg-white/10 border-white/25 text-white' 
+                        : 'bg-transparent border-transparent text-white/30 hover:bg-white/5 hover:text-white/70'
+                    }`}
+                    title={name}
+                  >
+                    {icon}
+                    {tab === 'PLAYLIST' && playlist.length > 0 && (
+                      <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    )}
+                    {tab === 'FAVORITES' && favorites.length > 0 && (
+                      <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-450" />
+                    )}
+                    
+                    {/* Tooltip */}
+                    <span className="absolute left-11 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[#121218] text-[9px] font-bold text-white whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-all duration-200 z-50 shadow-md border border-white/5">
+                      {name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right side drawer: Track Listings Content (Only if NOT collapsed) */}
+            {!isSideCollapsed && (
+              <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#0A0A0F] p-3 text-slate-350">
+                {/* Header section / titles */}
+                <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5 shrink-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    {activeLibraryTab === 'OFFLINE_CRATE' ? 'OFFLINE CRATE' : activeLibraryTab} PANEL
+                  </span>
+                  {/* Backup / Export / Import header buttons */}
+                  <div className="flex gap-1.5 bg-white/5 p-1 rounded-md">
+                    <button 
+                      onClick={exportPlaylist} 
+                      className="p-1 rounded text-zinc-400 hover:text-white cursor-pointer"
+                      title="Backup Set"
+                    >
+                      <Save size={10} />
+                    </button>
+                    <label className="p-1 rounded text-zinc-400 hover:text-white cursor-pointer">
+                      <ListPlus size={10} />
+                      <input type="file" className="hidden" accept=".json" onChange={importPlaylist} />
+                    </label>
+                  </div>
+                </div>
+
+                {/* SEARCH BAR (if applicable for searching tabs) */}
+                {['CRATES', 'FAVORITES', 'PLAYLIST', 'OFFLINE_CRATE', 'HISTORY'].includes(activeLibraryTab) && (
+                  <div className="relative mb-3 shrink-0">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-white/20" size={10} />
+                    <input 
+                      type="text" 
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      placeholder={`Filter active list...`} 
+                      className="w-full bg-white/5 border border-white/10 rounded-md py-1 pl-8 pr-3 text-[10px] text-white placeholder:text-white/20 focus:outline-[#3b82f6]/40 focus:bg-white/10 transition-all font-mono" 
+                    />
+                  </div>
+                )}
+
+                {/* Submenu for specific categories in Crates tab */}
+                {activeLibraryTab === 'CRATES' && (
+                  <div className="flex gap-1.5 mb-2 shrink-0 overflow-x-auto pb-1 select-none flex-nowrap scrollbar-none scrollbar-thin">
+                    {['System Samples', 'Audius Hits', 'House Classics', 'Deep Techno'].map((crate) => {
+                      const isActive = crate === 'System Samples' 
+                        ? (searchQuery === '' && activeLibraryTab === 'CRATES')
+                        : (searchQuery === crate && activeLibraryTab === 'CRATES');
+                      return (
+                        <button
+                          key={crate}
+                          onClick={() => {
+                            if (crate === 'System Samples') {
+                              setSearchQuery('');
+                              setAudiusTracks([]);
+                            } else {
+                              setSearchQuery(crate);
+                              handleSearch(crate);
+                            }
+                          }}
+                          className={`text-[8.5px] px-2 py-0.5 rounded transition-all uppercase whitespace-nowrap cursor-pointer ${
+                            isActive 
+                              ? 'bg-blue-500/20 text-blue-400 font-bold border border-blue-500/30' 
+                              : 'bg-white/5 text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {crate}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* RENDER THE TAB CONTENT */}
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                  {renderLibraryContent(true)}
+                </div>
+              </div>
+            )}
+          </aside>
+        )}
+
+        {/* Right / Bottom container adjusting to the sidebar */}
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden relative">
+          {/* MAIN CONTROLLER SURFACE */}
+          <main className="flex-1 relative overflow-hidden bg-black/20">
         {/* Mobile View Toggles */}
         <div className="md:hidden absolute top-0 left-0 w-full z-10 flex justify-center pt-2 gap-2">
             {['A', 'MIXER', 'B'].map((mode) => (
@@ -1705,32 +2557,42 @@ export default function App() {
       </main>
 
       {/* BROWSER AREA */}
-      <footer 
-        style={{ 
-          height: isTempExpanded ? '80%' : `${browserHeight}px`,
-        }}
-        className={`bg-[#0A0A0F] border-t border-white/10 grid grid-cols-[110px_1fr] lg:grid-cols-[200px_1fr] gap-4 flex-shrink-0 transition-[height] duration-300 ease-in-out relative z-40 ${isTempExpanded ? 'fixed bottom-0 left-0 w-full shadow-[0_-20px_50px_rgba(0,0,0,0.9)] p-4' : 'p-3'}`}
-      >
-        {/* Resize Handle / Splitter */}
-        <div 
-          onMouseDown={handleResizeStart}
-          onTouchStart={handleResizeStart}
-          className="absolute -top-1 left-0 w-full h-2 cursor-ns-resize hover:bg-blue-500/20 active:bg-blue-500/40 z-50 transition-colors flex items-center justify-center group"
+      {libraryDock === 'BOTTOM' && (
+        <footer 
+          style={{ 
+            height: isTempExpanded ? '80%' : `${browserHeight}px`,
+          }}
+          className={`bg-[#0A0A0F] border-t border-white/10 grid grid-cols-[110px_1fr] lg:grid-cols-[200px_1fr] gap-4 flex-shrink-0 transition-[height] duration-300 ease-in-out relative z-40 ${isTempExpanded ? 'fixed bottom-0 left-0 w-full shadow-[0_-20px_50px_rgba(0,0,0,0.9)] p-4' : 'p-3'}`}
         >
-            <div className="w-20 h-1 bg-white/5 rounded-full group-hover:bg-blue-400/40 group-active:bg-blue-400" />
-        </div>
-
-        <div className="border-r border-white/5 flex flex-col gap-3 pr-4">
-          <div className="flex items-center justify-between mb-1">
-            <div className="text-[10px] uppercase font-black tracking-widest text-white/30">LIBRARIES</div>
-            <button 
-              onClick={() => setIsTempExpanded(!isTempExpanded)}
-              className={`p-1.5 rounded-md transition-all ${isTempExpanded ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-white/5 text-white/30 hover:text-white hover:bg-white/10'}`}
-              title={isTempExpanded ? "Collapse Browser" : "Expand Overlay"}
-            >
-              {isTempExpanded ? <ChevronDown size={14} /> : <Maximize2 size={14} />}
-            </button>
+          {/* Resize Handle / Splitter */}
+          <div 
+            onMouseDown={handleResizeStart}
+            onTouchStart={handleResizeStart}
+            className="absolute -top-1 left-0 w-full h-2 cursor-ns-resize hover:bg-blue-500/20 active:bg-blue-500/40 z-50 transition-colors flex items-center justify-center group"
+          >
+              <div className="w-20 h-1 bg-white/5 rounded-full group-hover:bg-blue-400/40 group-active:bg-blue-400" />
           </div>
+
+          <div className="border-r border-white/5 flex flex-col gap-3 pr-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-[10px] uppercase font-black tracking-widest text-white/30">LIBRARIES</div>
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={handleToggleLibraryDock}
+                  className="p-1 rounded bg-white/5 text-zinc-400 hover:text-blue-400 cursor-pointer transition-all"
+                  title="Dock to Left Sidebar (Landscape Optimized)"
+                >
+                  <LayoutGrid size={11} className="rotate-90" />
+                </button>
+                <button 
+                  onClick={() => setIsTempExpanded(!isTempExpanded)}
+                  className={`p-1 rounded transition-all cursor-pointer ${isTempExpanded ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'bg-white/5 text-zinc-400 hover:text-white'}`}
+                  title={isTempExpanded ? "Collapse Browser" : "Expand Overlay"}
+                >
+                  {isTempExpanded ? <ChevronDown size={11} /> : <Maximize2 size={11} />}
+                </button>
+              </div>
+            </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-1.5">
             <div 
               onClick={() => {
@@ -2474,6 +3336,9 @@ export default function App() {
             )}
         </div>
       </footer>
+      )}
+        </div> {/* Close inner container */}
+      </div> {/* Close COLUMN OR SPLIT DOCK WRAPPER */}
       <AudioDebugger 
         playbackRates={playbackRates}
         playingState={playingState}
