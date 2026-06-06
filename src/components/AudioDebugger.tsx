@@ -35,6 +35,7 @@ export default function AudioDebugger({
   const [copied, setCopied] = useState(false);
   const [stutterDetected, setStutterDetected] = useState(false);
   const [cpuWarning, setCpuWarning] = useState(false);
+  const [userNote, setUserNote] = useState('');
 
   // Raw logs buffered in a ref to avoid React performance choke while playing
   const allLogsRef = useRef<string[]>([]);
@@ -152,7 +153,22 @@ export default function AudioDebugger({
       startLogging();
     }
     const snap = getSystemSnapshot();
-    logMessage('EVENT', '🚨 *** USER FLAGGED DISTORTION MOMENT ***', snap);
+    const noteSuffix = userNote.trim() ? ` | Obs: "${userNote.trim()}"` : '';
+    logMessage('EVENT', `🚨 *** USER FLAGGED DISTORTION MOMENT ***${noteSuffix}`, snap);
+    if (userNote.trim()) {
+      setUserNote('');
+    }
+  };
+
+  // Submit standard type notes to the debugger console list
+  const submitNoteToLog = () => {
+    if (!userNote.trim()) return;
+    if (!isLogging) {
+      startLogging();
+    }
+    const snap = getSystemSnapshot();
+    logMessage('EVENT', `📝 USER NOTE: "${userNote.trim()}"`, snap);
+    setUserNote('');
   };
 
   // Clear logs action
@@ -318,54 +334,101 @@ export default function AudioDebugger({
             </div>
 
             {/* Quick Action Dashboard */}
-            <div className="p-4 bg-[#101016] border-b border-white/15 grid grid-cols-2 gap-3 shrink-0">
-              <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-black/40 border border-white/5">
-                <span className="text-[9px] text-[#8e8e9f] font-mono tracking-widest uppercase">TRACING CONTROL</span>
-                <div className="flex gap-2 mt-1">
-                  {!isLogging ? (
+            <div className="p-4 bg-[#101016] border-b border-white/15 flex flex-col gap-3 shrink-0">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-black/40 border border-white/5">
+                  <span className="text-[9px] text-[#8e8e9f] font-mono tracking-widest uppercase">TRACING CONTROL</span>
+                  <div className="flex gap-2 mt-1">
+                    {!isLogging ? (
+                      <button
+                        id="btn-diagnostics-start"
+                        onClick={startLogging}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase hover:bg-emerald-600/30 transition-all"
+                      >
+                        <Play size={11} fill="currentColor" /> Start Logs
+                      </button>
+                    ) : (
+                      <button
+                        id="btn-diagnostics-stop"
+                        onClick={stopLogging}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded bg-red-600/20 border border-red-500/40 text-red-400 text-[10px] font-bold uppercase hover:bg-red-600/30 transition-all animate-pulse"
+                      >
+                        <Pause size={11} fill="currentColor" /> Stop Logs
+                      </button>
+                    )}
+                    
                     <button
-                      id="btn-diagnostics-start"
-                      onClick={startLogging}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded bg-emerald-600/20 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold uppercase hover:bg-emerald-600/30 transition-all"
+                      id="btn-diagnostics-clear"
+                      onClick={clearLogs}
+                      className="py-1.5 px-2 rounded bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 text-[10px] uppercase font-bold"
+                      title="Clear Current Terminal Logs"
                     >
-                      <Play size={11} fill="currentColor" /> Start Logs
+                      Clear
                     </button>
-                  ) : (
-                    <button
-                      id="btn-diagnostics-stop"
-                      onClick={stopLogging}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded bg-red-600/20 border border-red-500/40 text-red-400 text-[10px] font-bold uppercase hover:bg-red-600/30 transition-all animate-pulse"
-                    >
-                      <Pause size={11} fill="currentColor" /> Stop Logs
-                    </button>
-                  )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-red-950/20 border border-red-500/20 justify-between">
+                  <div>
+                    <span className="text-[9px] text-red-400 font-mono tracking-widest uppercase flex items-center gap-1">
+                      <ShieldAlert size={10} /> DISTORTION FLAGGER
+                    </span>
+                    <p className="text-[9px] text-slate-400 mt-1 font-sans">Click immediately when you hear cracking, speedups, or glitching!</p>
+                  </div>
                   
                   <button
-                    id="btn-diagnostics-clear"
-                    onClick={clearLogs}
-                    className="py-1.5 px-2 rounded bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 text-[10px] uppercase font-bold"
-                    title="Clear Current Terminal Logs"
+                    id="btn-flag-distortion"
+                    onClick={flagDistortionMoment}
+                    className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-red-500 border border-red-600 text-white text-[10px] font-black uppercase hover:bg-red-600 active:scale-95 shadow-[0_0_12px_rgba(239,68,68,0.3)] transition-all mt-1"
                   >
-                    Clear
+                    <AlertTriangle size={12} className="animate-bounce" /> Flag Distortion Event
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-red-950/20 border border-red-500/20 justify-between">
-                <div>
-                  <span className="text-[9px] text-red-400 font-mono tracking-widest uppercase flex items-center gap-1">
-                    <ShieldAlert size={10} /> DISTORTION FLAGGER
+              {/* REAL-TIME BUG OBSERVER / NOTE SECTION */}
+              <div className="flex flex-col gap-1.5 p-3 rounded-lg bg-indigo-950/25 border border-indigo-500/30">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] text-indigo-400 font-mono tracking-widest uppercase flex items-center gap-1.5 font-bold">
+                    ✍️ Real-Time Note / Audio Observation
                   </span>
-                  <p className="text-[9px] text-slate-400 mt-1">Click immediately when you hear cracking, speedups, or glitching!</p>
+                  {userNote.trim() && (
+                    <span className="text-[8px] text-indigo-400 font-mono italic animate-pulse">
+                      Enter key logs note
+                    </span>
+                  )}
                 </div>
                 
-                <button
-                  id="btn-flag-distortion"
-                  onClick={flagDistortionMoment}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded bg-red-500 border border-red-600 text-white text-[10px] font-black uppercase hover:bg-red-600 active:scale-95 shadow-[0_0_12px_rgba(239,68,68,0.3)] transition-all mt-1"
-                >
-                  <AlertTriangle size={12} className="animate-bounce" /> Flag Distortion Event
-                </button>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    id="input-diagnostic-user-note"
+                    type="text"
+                    value={userNote}
+                    onChange={(e) => setUserNote(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        submitNoteToLog();
+                      }
+                    }}
+                    placeholder="Type what you hear (e.g. 'Song suddenly speeding up' or 'Severe audio crackling starts')"
+                    className="flex-1 bg-black/60 border border-indigo-500/30 hover:border-indigo-500/50 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/30 rounded px-2.5 py-1.5 text-[11px] text-slate-100 placeholder-slate-500 focus:outline-none transition-all font-sans"
+                  />
+                  <button
+                    id="btn-submit-user-note"
+                    onClick={submitNoteToLog}
+                    disabled={!userNote.trim()}
+                    className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-tight transition-all duration-150 ${
+                      userNote.trim()
+                        ? 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white shadow-md shadow-indigo-500/20'
+                        : 'bg-indigo-950/30 text-indigo-500/50 border border-indigo-950/50 cursor-not-allowed'
+                    }`}
+                  >
+                    Log Note
+                  </button>
+                </div>
+                <p className="text-[8px] text-slate-500 font-sans leading-normal">
+                  Providing descriptions here will automatically include them when copying/downloading logs to share with me.
+                </p>
               </div>
             </div>
 
