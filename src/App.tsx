@@ -136,6 +136,76 @@ export default function App() {
     refreshOfflineCrate();
   }, [refreshOfflineCrate]);
 
+  // Fullscreen view state & native app environment checks
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenToggle, setShowFullscreenToggle] = useState(true);
+
+  useEffect(() => {
+    // Detect environment (standalone/native wrapper like Capacitor/Cordova or installed PWA)
+    const isCordova = 'cordova' in window;
+    const isCapacitor = 'Capacitor' in window;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isAndroidApp = /android/i.test(navigator.userAgent) && (isCordova || isCapacitor || isStandalone);
+    
+    if (isAndroidApp) {
+      setShowFullscreenToggle(false);
+    }
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      const p = document.documentElement.requestFullscreen();
+      if (p && p.then) {
+        p.then(() => setIsFullscreen(true))
+          .catch(err => {
+            console.warn("Error attempting standard fullscreen:", err);
+            const docEl = document.documentElement as any;
+            if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+            else if (docEl.mozRequestFullScreen) docEl.mozRequestFullScreen();
+            else if (docEl.msRequestFullscreen) docEl.msRequestFullscreen();
+          });
+      } else {
+        const docEl = document.documentElement as any;
+        if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+        else if (docEl.mozRequestFullScreen) docEl.mozRequestFullScreen();
+        else if (docEl.msRequestFullscreen) docEl.msRequestFullscreen();
+      }
+    } else {
+      const p = document.exitFullscreen();
+      if (p && p.then) {
+        p.then(() => setIsFullscreen(false))
+          .catch(err => {
+            console.warn("Error attempting standard exit:", err);
+            const doc = document as any;
+            if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+            else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+            else if (doc.msExitFullscreen) doc.msExitFullscreen();
+          });
+      } else {
+        const doc = document as any;
+        if (doc.webkitExitFullscreen) doc.webkitExitFullscreen();
+        else if (doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+        else if (doc.msExitFullscreen) doc.msExitFullscreen();
+      }
+    }
+  }, []);
+
   const [deckSources, setDeckSources] = useState<{ A: 'AUDIO' | 'EXTERNAL', B: 'AUDIO' | 'EXTERNAL' }>({ A: 'AUDIO', B: 'AUDIO' });
   const [externalUrls, setExternalUrls] = useState<{ A: string | null, B: string | null }>({ A: null, B: null });
 
@@ -2089,6 +2159,18 @@ export default function App() {
             <span className="text-[8px] opacity-40 leading-none">CPU</span>
             <span className="text-green-400 font-bold">14%</span>
           </div>
+          {showFullscreenToggle && (
+            <button 
+              onClick={toggleFullscreen}
+              className={`flex flex-col items-center justify-center px-1.5 py-0.5 rounded transition-all cursor-pointer border ${isFullscreen ? 'bg-blue-500/20 border-blue-500/40 text-blue-400' : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'}`}
+              title={isFullscreen ? "Exit Immersive Fullscreen" : "Enter Immersive Fullscreen"}
+            >
+              <span className="text-[8px] opacity-40 leading-none mb-0.5 uppercase">VIEWPORT</span>
+              <span className="text-[9px] font-black tracking-wide font-mono leading-none">
+                {isFullscreen ? 'EXIT ⛶' : 'FULL ⛶'}
+              </span>
+            </button>
+          )}
           {!isStarted && (
             <button 
               onClick={startAudio}
