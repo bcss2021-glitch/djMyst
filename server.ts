@@ -14,13 +14,13 @@ async function startServer() {
   const logFilePath = path.join(process.cwd(), "diagnostics_report.txt");
 
   // API endpoint to append logs to diagnostics_report.txt
-  app.post("/api/diagnostics/append", (req, res) => {
+  app.post("/api/diagnostics/append", async (req, res) => {
     try {
       const { text, snap } = req.body;
       const contentToAppend = text || "";
       
-      // Append content to local file
-      fs.appendFileSync(logFilePath, contentToAppend + "\n", "utf8");
+      // Append content to local file asynchronously
+      await fs.promises.appendFile(logFilePath, contentToAppend + "\n", "utf8");
       
       console.log(`[Diagnostics] Appended ${contentToAppend.length} characters to external file diagnostics_report.txt`);
       res.json({ success: true, message: "Logs appended successfully.", filePath: logFilePath });
@@ -31,10 +31,10 @@ async function startServer() {
   });
 
   // API endpoint to retrieve full diagnostics file
-  app.get("/api/diagnostics/read", (req, res) => {
+  app.get("/api/diagnostics/read", async (req, res) => {
     try {
       if (fs.existsSync(logFilePath)) {
-        const content = fs.readFileSync(logFilePath, "utf8");
+        const content = await fs.promises.readFile(logFilePath, "utf8");
         res.json({ success: true, content });
       } else {
         res.json({ success: true, content: "" });
@@ -46,13 +46,29 @@ async function startServer() {
   });
 
   // API endpoint to clear the diagnostics log file
-  app.post("/api/diagnostics/clear", (req, res) => {
+  app.post("/api/diagnostics/clear", async (req, res) => {
     try {
-      fs.writeFileSync(logFilePath, "", "utf8");
+      await fs.promises.writeFile(logFilePath, "", "utf8");
       res.json({ success: true, message: "Diagnostics file cleared." });
     } catch (error: any) {
       console.error("[Diagnostics Error] Failed to clear logs:", error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // API endpoint to download the diagnostics file directly
+  app.get("/api/diagnostics/download", (req, res) => {
+    try {
+      if (fs.existsSync(logFilePath)) {
+        res.download(logFilePath, "audio-diagnostics-report.txt");
+      } else {
+        res.setHeader("Content-Type", "text/plain");
+        res.setHeader("Content-Disposition", "attachment; filename=audio-diagnostics-report.txt");
+        res.send("No logs recorded on server yet.");
+      }
+    } catch (error: any) {
+      console.error("[Diagnostics Error] Failed to download file:", error);
+      res.status(500).send("Failed to download logs.");
     }
   });
 

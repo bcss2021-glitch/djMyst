@@ -36,12 +36,16 @@ export default function AudioDebugger({
   const [stutterDetected, setStutterDetected] = useState(false);
   const [cpuWarning, setCpuWarning] = useState(false);
   const [fileSaveStatus, setFileSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportLogsText, setExportLogsText] = useState('');
+  const [modalCopied, setModalCopied] = useState(false);
   const noteInputRef = useRef<HTMLInputElement>(null);
 
   // Raw logs buffered in a ref to avoid React performance choke while playing
   const allLogsRef = useRef<string[]>([]);
   // Store any unsaved logs to flush to the server
   const unsavedLogsRef = useRef<string[]>([]);
+  const isFlushingRef = useRef<boolean>(false);
   
   // Visual logs state only shows the last 30 items for visual performance
   const [visibleLogs, setVisibleLogs] = useState<string[]>([]);
@@ -55,8 +59,9 @@ export default function AudioDebugger({
 
   // Helper: Flush the unsaved logs buffer to the backend Express server-side file
   const flushLogsToServer = async () => {
-    if (unsavedLogsRef.current.length === 0) return;
+    if (unsavedLogsRef.current.length === 0 || isFlushingRef.current) return;
     
+    isFlushingRef.current = true;
     // Copy reference and clear local buffer immediately to avoid race conditions
     const itemsPending = [...unsavedLogsRef.current];
     unsavedLogsRef.current = [];
@@ -80,6 +85,8 @@ export default function AudioDebugger({
       setFileSaveStatus('error');
       // Restore the items back to the buffer to ensure they are not lost
       unsavedLogsRef.current = [...itemsPending, ...unsavedLogsRef.current];
+    } finally {
+      isFlushingRef.current = false;
     }
   };
 
@@ -149,8 +156,8 @@ export default function AudioDebugger({
     });
     setLogCount(allLogsRef.current.length);
 
-    // If critical alert or event, flush immediately to guarantee preservation
-    if (type === 'EVENT' || type === 'ERROR' || unsavedLogsRef.current.length >= 8) {
+    // If critical alert or event, flush immediately to guarantee preservation but avoid overlapping concurrent requests
+    if ((type === 'EVENT' || type === 'ERROR' || unsavedLogsRef.current.length >= 12) && !isFlushingRef.current) {
       flushLogsToServer();
     }
   };
@@ -300,13 +307,20 @@ export default function AudioDebugger({
   const downloadLogs = () => {
     if (allLogsRef.current.length === 0) return;
     const formattedLogs = allLogsRef.current.join('\n');
-    const blob = new Blob([formattedLogs], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `audio-diagnostics-report-${Date.now()}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+    setExportLogsText(formattedLogs);
+    setShowExportModal(true);
+
+    try {
+      const blob = new Blob([formattedLogs], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `audio-diagnostics-report-${Date.now()}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.warn('Sandbox or device environment blocked programmatic dynamic click download. Showing fallback layout.', e);
+    }
   };
 
   // Real-time jitter and system tick tracker
@@ -695,6 +709,120 @@ export default function AudioDebugger({
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Retro Export Modal Dialog Overlay */}
+      <AnimatePresence>
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#121216] border-2 border-indigo-500/30 rounded-lg max-w-lg w-full p-5 shadow-[0_0_40px_rgba(99,102,241,0.25)] flex flex-col gap-4 max-h-[85vh]"
+            >
+              {/* Title Header */}
+              <div className="border-b border-indigo-500/20 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="text-indigo-400 stroke-[2.5]" size={16} />
+                  <span className="font-mono text-xs font-black tracking-widest text-indigo-400 uppercase">
+                    DIAGNOSTICS EXPORT UTILITY
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setShowExportModal(false)}
+                  className="p-1 rounded bg-white/5 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Informative tips */}
+              <div className="text-[10px] text-slate-400 font-sans leading-relaxed bg-indigo-950/20 p-3 rounded border border-indigo-500/10 flex flex-col gap-2">
+                <p>
+                  🛡️ <strong>Security Sandbox notice:</strong> Modern browsers often block automatic programmatic downloads within nested iframes or serverless hosts (like Vercel).
+                </p>
+                <p>
+                  To guarantee you get your diagnostic log file, please choose one of the direct-action options below:
+                </p>
+              </div>
+
+              {/* Options Bar */}
+              <div className="grid grid-cols-2 gap-2 font-mono">
+                {/* Option A: Quick Copy */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(exportLogsText);
+                    setModalCopied(true);
+                    setTimeout(() => setModalCopied(false), 2000);
+                  }}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30 transition-all cursor-pointer active:scale-[0.98]"
+                >
+                  {modalCopied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                  {modalCopied ? "COMPLETED!" : "COPY TO CLIPBOARD"}
+                </button>
+
+                {/* Option B: Stationary Anchor fallback */}
+                <a
+                  href={`data:text/plain;charset=utf-8,${encodeURIComponent(exportLogsText)}`}
+                  download={`audio-diagnostics-report-${Date.now()}.txt`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => {
+                    // Flash success
+                    setModalCopied(true);
+                    setTimeout(() => setModalCopied(false), 2000);
+                  }}
+                  className="flex items-center justify-center gap-1.5 py-2 px-3 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 transition-all cursor-pointer text-center active:scale-[0.98]"
+                >
+                  <Download size={11} />
+                  SAVE FILE (.TXT)
+                </a>
+
+                {/* Option C: Direct Escape Server-side Download (opens outside frame) */}
+                <a
+                  href="/api/diagnostics/download"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="col-span-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded bg-zinc-900 border border-white/5 text-zinc-300 hover:text-white hover:bg-zinc-800 text-[10px] font-bold transition-all text-center"
+                  title="Retrieves the log database from server disk in a native tab escape"
+                >
+                  <Clock size={11} className="text-amber-400" />
+                  DOWNLOAD SERVER-SIDE REPORT FILE (UNRESTRICTED TAB ESCAPE)
+                </a>
+              </div>
+
+              {/* Live Preview / Select-All fallback text area */}
+              <div className="flex-1 flex flex-col min-h-0 gap-1.5">
+                <span className="text-[8.5px] font-mono uppercase tracking-widest text-[#5c5c70] block">
+                  MANUAL SELECTION TEXT AREA (CLICK TO HIGHLIGHT ALL):
+                </span>
+                <textarea
+                  readOnly
+                  value={exportLogsText}
+                  onClick={(e) => {
+                    const el = e.target as HTMLTextAreaElement;
+                    el.select();
+                  }}
+                  placeholder="No log sequences to export yet."
+                  className="flex-1 bg-black p-2.5 rounded border border-white/[0.06] font-mono text-[9px] text-[#8e8ea6] leading-relaxed select-all focus:outline-none focus:border-indigo-500/40 custom-scrollbar h-28 resize-none"
+                />
+              </div>
+
+              {/* Close footer button */}
+              <div className="flex justify-end pt-1.5 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setShowExportModal(false)}
+                  className="py-1 px-4 text-xs font-mono font-medium rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-300 transition-colors cursor-pointer"
+                >
+                  DISMISS UTILITY
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>
