@@ -209,7 +209,7 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
       ref={wheelRef}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      className={`relative w-44 h-44 rounded-full bg-[#0a0a0c] border-6 border-[#1c1c20] shadow-[0_0_30px_rgba(0,0,0,0.95),inset_0_0_20px_rgba(0,0,0,0.9)] flex items-center justify-center overflow-hidden transition-all duration-150 select-none ${
+      className={`relative w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-[#0a0a0c] border-[5px] sm:border-6 border-[#1c1c20] shadow-[0_0_30px_rgba(0,0,0,0.95),inset_0_0_20px_rgba(0,0,0,0.9)] flex items-center justify-center overflow-hidden transition-all duration-150 select-none ${
         isGrabbing 
           ? 'cursor-grabbing border-zinc-700 ring-2 ring-brand-cyan/20 scale-[0.99]' 
           : 'cursor-grab hover:border-zinc-800'
@@ -1086,7 +1086,7 @@ export default function Deck({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col items-center justify-between py-3 flex-1 h-full relative hardware-panel overflow-y-auto custom-scrollbar ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
+      className={`flex flex-col items-center justify-between py-2 flex-1 h-full relative hardware-panel overflow-y-auto custom-scrollbar ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
     >
       {/* Drag and Drop File Highlight Overlay */}
       {isDraggingFile && (
@@ -1106,7 +1106,7 @@ export default function Deck({
       )}
 
       {/* Track info strip with File Loader at the very top */}
-      <div className="w-full px-4 flex items-center justify-between gap-2 z-10 border-b border-white/5 pb-2 mb-2 shrink-0">
+      <div className="w-full px-4 flex items-center justify-between gap-2 z-10 border-b border-white/5 pb-1.5 mb-1.5 shrink-0">
         <div className="flex flex-col min-w-0 flex-1 text-left">
           <span className="text-[7.5px] font-black uppercase tracking-[0.2em] opacity-30">LOADED SOUND SOURCE</span>
           <div className="flex items-center gap-1.5 min-w-0">
@@ -1247,7 +1247,7 @@ export default function Deck({
       )}
 
       {/* Header Deck Info Grid */}
-      <div className="w-full px-4 grid grid-cols-3 gap-2 items-center z-10 font-mono shrink-0">
+      <div className="w-full px-4 grid grid-cols-3 gap-1.5 items-center z-10 font-mono shrink-0 mb-1.5">
          <div className="flex flex-col">
             <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">STATUS</span>
             <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center truncate">
@@ -1258,14 +1258,14 @@ export default function Deck({
          <div className="flex flex-col items-center">
             <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">TIME TRACKER</span>
             <div className="lcd-display text-[10px] font-bold text-emerald-400 text-center tabular-nums font-mono tracking-tight flex flex-col items-center w-full">
-              <span>{formatTime(resolvedCurrentTime)} / {formatTime(resolvedDuration)}</span>
-              {/* Mini visual progress slider */}
-              <div className="w-16 h-1 bg-zinc-950/80 rounded-full overflow-hidden mt-0.5 border border-white/5">
-                <div 
-                  className={`h-full ${id === 'A' ? 'bg-blue-400' : 'bg-purple-400'} transition-all duration-100`}
-                  style={{ width: `${resolvedDuration > 0 ? (resolvedCurrentTime / resolvedDuration) * 100 : 0}%` }}
-                />
-              </div>
+               <span>{formatTime(resolvedCurrentTime)} / {formatTime(resolvedDuration)}</span>
+               {/* Mini visual progress slider */}
+               <div className="w-16 h-1 bg-zinc-950/80 rounded-full overflow-hidden mt-0.5 border border-white/5">
+                 <div 
+                   className={`h-full ${id === 'A' ? 'bg-blue-400' : 'bg-purple-400'} transition-all duration-100`}
+                   style={{ width: `${resolvedDuration > 0 ? (resolvedCurrentTime / resolvedDuration) * 100 : 0}%` }}
+                 />
+               </div>
             </div>
          </div>
 
@@ -1277,7 +1277,7 @@ export default function Deck({
             </div>
             <button
               onClick={onBpmTap}
-              className="mt-1 px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[7px] font-black text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
+              className="mt-0.5 px-1.5 py-0.5 rounded border border-white/10 bg-white/5 text-[7px] font-black text-white/50 hover:text-white hover:bg-white/10 active:scale-95 transition-all uppercase tracking-wider cursor-pointer"
               title="Tap to the beat to set the BPM"
             >
               TAP BPM
@@ -1285,8 +1285,51 @@ export default function Deck({
          </div>
       </div>
 
-      {/* Platter Area */}
-      <div className="flex flex-col items-center gap-4 relative w-full px-4 shrink-0">
+      {/* Platter Area with Vertical Flow Controls next to JogWheel */}
+      <div className="flex items-center justify-center gap-2 sm:gap-4 relative w-full px-2 shrink-0 mt-1 mb-1.5 select-none">
+          {/* Left Vertical Platter Controls */}
+          <div className="flex flex-col gap-1 shrink-0 z-10 items-center">
+              <span className="text-[6.5px] font-bold text-zinc-500 uppercase tracking-widest">JOG MODE</span>
+              <div className="flex flex-col gap-1 bg-black/60 p-1 rounded-md border border-white/5 text-[8px] font-mono font-bold w-12 sm:w-14">
+                <button
+                  onClick={() => setJogMode('VINYL')}
+                  className={`py-1 px-0.5 rounded text-[8px] transition-all uppercase select-none cursor-pointer text-center ${
+                    jogMode === 'VINYL' 
+                      ? 'bg-amber-500 text-black shadow-[0_2px_6px_rgba(245,158,11,0.3)] font-black' 
+                      : 'text-white/40 hover:text-white/60'
+                  }`}
+                  title="Scratch mode"
+                >
+                  VINYL
+                </button>
+                <button
+                  onClick={() => setJogMode('CDJ')}
+                  className={`py-1 px-0.5 rounded text-[8px] transition-all uppercase select-none cursor-pointer text-center ${
+                    jogMode === 'CDJ' 
+                      ? (id === 'A' ? 'bg-blue-500 text-white shadow-[0_2px_6px_rgba(59,130,246,0.3)] font-black' : 'bg-purple-500 text-white shadow-[0_2px_6px_rgba(168,85,247,0.3)] font-black')
+                      : 'text-white/40 hover:text-white/60'
+                  }`}
+                  title="Pitch bend mode"
+                >
+                  CDJ
+                </button>
+              </div>
+
+              {/* Slip Mode Toggle */}
+              <button
+                onClick={onSlipToggle}
+                className={`w-12 sm:w-14 py-1 rounded-md border text-[7.5px] font-mono font-black tracking-wider uppercase transition-all select-none cursor-pointer text-center ${
+                  isSlipActive 
+                    ? 'bg-red-500 border-red-400 text-white shadow-[0_0_6px_rgba(239,68,68,0.5)]' 
+                    : 'bg-black/60 border-white/5 text-white/40 hover:text-white hover:border-white/10'
+                }`}
+                title="Slip mode"
+              >
+                SLIP
+              </button>
+          </div>
+
+          {/* Center JogWheel Disc */}
           <div className="relative group flex flex-col items-center">
               <JogWheel 
                   id={id}
@@ -1309,73 +1352,36 @@ export default function Deck({
               {/* Toggle Button */}
               <button 
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className={`absolute ${id === 'A' ? '-right-8' : '-left-8'} top-1/2 -translate-y-1/2 p-2 bg-brand-panel border border-white/10 text-white/40 hover:text-white transition-all z-20 shadow-2xl rounded-full tactile-button`}
+                  className={`absolute ${id === 'A' ? '-right-7' : '-left-7'} top-1/2 -translate-y-1/2 p-1.5 bg-brand-panel border border-white/10 text-white/40 hover:text-white transition-all z-20 shadow-2xl rounded-full tactile-button`}
                   title={showAdvanced ? "Back to Deck" : "Show FX"}
               >
-                  {showAdvanced ? (id === 'A' ? <ChevronLeft size={12} /> : <ChevronRight size={12} />) : (id === 'A' ? <ChevronRight size={12} /> : <ChevronLeft size={12} />)}
+                  {showAdvanced ? (id === 'A' ? <ChevronLeft size={10} /> : <ChevronRight size={10} />) : (id === 'A' ? <ChevronRight size={10} /> : <ChevronLeft size={10} />)}
               </button>
           </div>
 
-          {/* Grouped Platter & Playback Mode Controls */}
-          <div className="flex flex-col items-center gap-2 z-10 w-full">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {/* Jog Mode Selector */}
-              <div className="flex items-center gap-1 bg-black/50 p-0.5 rounded-full border border-white/5 text-[8.5px] font-mono font-bold">
-                <button
-                  onClick={() => setJogMode('VINYL')}
-                  className={`px-2 py-0.5 rounded-full transition-all uppercase select-none cursor-pointer ${
-                    jogMode === 'VINYL' 
-                      ? 'bg-amber-500 text-black shadow-[0_2px_8px_rgba(245,158,11,0.3)] font-black' 
-                      : 'text-white/40 hover:text-white/60'
-                  }`}
-                >
-                  VINYL
-                </button>
-                <button
-                  onClick={() => setJogMode('CDJ')}
-                  className={`px-2 py-0.5 rounded-full transition-all uppercase select-none cursor-pointer ${
-                    jogMode === 'CDJ' 
-                      ? (id === 'A' ? 'bg-blue-500 text-white shadow-[0_2px_8px_rgba(59,130,246,0.3)] font-black' : 'bg-purple-500 text-white shadow-[0_2px_8px_rgba(168,85,247,0.3)] font-black')
-                      : 'text-white/40 hover:text-white/60'
-                  }`}
-                >
-                  CDJ
-                </button>
+          {/* Right Vertical Platter Controls */}
+          <div className="flex flex-col gap-1 shrink-0 z-10 items-center">
+              <span className="text-[6.5px] font-bold text-zinc-500 uppercase tracking-widest">STYLE</span>
+              <div className="flex flex-col gap-1 bg-black/60 p-1 rounded-md border border-white/5 text-[7.5px] font-mono font-bold w-12 sm:w-14">
+                {(['VINYL', 'CDJ', 'NEON'] as const).map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => setPlatterStyle(style)}
+                    className={`py-1 text-[7.5px] rounded transition-all uppercase select-none cursor-pointer text-center ${
+                      platterStyle === style 
+                        ? 'bg-zinc-700 text-white font-black' 
+                        : 'text-white/40 hover:text-white/60'
+                    }`}
+                    title={`${style} Platter style`}
+                  >
+                    {style}
+                  </button>
+                ))}
               </div>
-
-              {/* Slip Mode Toggle */}
-              <button
-                onClick={onSlipToggle}
-                className={`px-2.5 py-1 rounded-full border text-[8px] font-mono font-black tracking-wider uppercase transition-all select-none cursor-pointer ${
-                  isSlipActive 
-                    ? 'bg-red-500 border-red-400 text-white shadow-[0_0_8px_rgba(239,68,68,0.5)]' 
-                    : 'bg-black/50 border-white/5 text-white/40 hover:text-white hover:border-white/10'
-                }`}
-              >
-                SLIP
-              </button>
-            </div>
-
-            {/* Platter Visual Style Cycle Selector */}
-            <div className="flex items-center gap-0.5 bg-black/50 p-0.5 rounded-full border border-white/5 text-[8px] font-mono font-bold">
-              <span className="text-[7.5px] text-zinc-500 px-1.5 uppercase font-sans tracking-wider">STYLE:</span>
-              {(['VINYL', 'CDJ', 'NEON'] as const).map((style) => (
-                <button
-                  key={style}
-                  onClick={() => setPlatterStyle(style)}
-                  className={`px-2.5 py-0.5 rounded-full transition-all uppercase select-none cursor-pointer ${
-                    platterStyle === style 
-                      ? 'bg-zinc-700 text-white font-black' 
-                      : 'text-white/40 hover:text-white/60'
-                  }`}
-                >
-                  {style}
-                </button>
-              ))}
-            </div>
           </div>
+      </div>
         
-        <div className="grid grid-cols-2 gap-4 w-full shrink-0">
+      <div className="grid grid-cols-2 gap-3 w-full shrink-0">
             {/* Loops & Cues Left Column */}
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center px-1">
@@ -1426,7 +1432,6 @@ export default function Deck({
                 </div>
             </div>
         </div>
-      </div>
 
       {/* Advanced FX Overlay */}
       {showAdvanced && (
@@ -1741,7 +1746,7 @@ export default function Deck({
 
       {/* Main Transport Surface */}
       <div className="w-full flex justify-between items-end px-4 gap-4 z-10 shrink-0">
-        <div className="flex flex-col gap-3">
+         <div className="flex flex-col gap-1.5">
             <div className="flex gap-1.5 h-7">
               <button 
                 onClick={onKeyLockToggle} 
