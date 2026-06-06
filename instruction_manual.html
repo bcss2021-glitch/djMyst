@@ -138,6 +138,7 @@
       <a href="#crate" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">07 // Sound Libraries</a>
       <a href="#masterclass" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">08 // Step-By-Step Mix</a>
       <a href="#mobile" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all">09 // Mobile App Compilation</a>
+      <a href="#diagnostics" class="flex items-center gap-2 p-3 text-xs rounded hover:bg-white/5 text-zinc-400 hover:text-white font-medium border-l-2 border-transparent hover:border-brand-cyan transition-all text-emerald-400">10 // Diagnostics & Troubleshooting</a>
       
       <!-- Utility Warning Bezel -->
       <div class="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg space-y-2 mt-8">
@@ -710,6 +711,54 @@
             <div class="p-2 bg-yellow-500/5 border border-yellow-500/10 rounded-md text-[10px] text-zinc-400 font-sans">
               <strong class="text-yellow-500 uppercase font-mono block mb-0.5">⚠️ WEB AUDIO LATENCY TIP:</strong>
               Mobile Safari and Chrome restrict AudioContext playback until the user taps/clicks the canvas in any form. The application handles this natively with a primary touch/click detector!
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 10: DIAGNOSTICS & TROUBLESHOOTING -->
+      <section id="diagnostics" class="space-y-6 pt-10 border-t border-white/5">
+        <h3 class="text-white font-display font-medium text-lg leading-none tracking-tight flex items-center gap-3">
+          <span class="text-brand-cyan text-sm font-mono tracking-widest">10 //</span> 
+          SYSTEM DIAGNOSTICS & AUDIO TROUBLESHOOTING
+        </h3>
+        <p class="text-zinc-400 text-xs leading-relaxed">
+          If you encounter periodic audio distortion, crackling clicks, speed fluctuations, or clock drift after tracks loop several times, use the interactive live diagnostic tools built into the console to isolate and record errors:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Diagnostics Features -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-3 font-mono text-xs">
+            <h4 class="text-brand-cyan font-display font-bold uppercase text-[10px] tracking-widest">DIAGNOSTICS BOARD INSTRUCTIONS</h4>
+            <div class="space-y-3 font-sans text-zinc-300 text-[11px] leading-relaxed">
+              <div>
+                <strong class="text-white">1. Toggle the Diagnostic panel:</strong> Click the floating button in the bottom-right corner marked <code class="bg-black/30 text-blue-400 px-1 py-0.5 rounded font-mono text-[9px]">🐞 LIVE AUDIO TESTER</code> to expand the Diagnostic station drawer.
+              </div>
+              <div>
+                <strong class="text-white">2. Start Session Logs:</strong> Press <span class="text-emerald-400 font-bold font-mono">"Start Logs"</span> to begin recording fine-grained Web Audio timing, sample rates, thread performance indices, and master positions.
+              </div>
+              <div>
+                <strong class="text-white">3. Flag the Distortion:</strong> As soon as you hear any sound degradation, speed fluctuations, or crackling, click the large red <span class="text-red-400 font-bold font-mono">"Flag Distortion Event"</span> button. This captures a high-resolution state snapshot immediately with timestamps.
+              </div>
+              <div>
+                <strong class="text-white">4. Write Real-Time Notes:</strong> Type a message under the Note section (e.g., <i>"cracking started midway on second loop"</i>) and press <span class="text-indigo-400 font-bold font-mono">"Log Note"</span> or hit <kbd class="px-1 bg-zinc-800 text-white rounded">Enter</kbd> to insert custom observer marks into the log timeline on-the-fly. Typing notes will NOT disrupt the audio loop.
+              </div>
+            </div>
+          </div>
+
+          <!-- Portability/Clearing -->
+          <div class="border border-white/5 bg-[#0a0a0d] p-5 rounded-lg space-y-3 font-mono text-xs">
+            <h4 class="text-brand-purple font-display font-bold uppercase text-[10px] tracking-widest">DURABLE SERVER BACKUP BACKING</h4>
+            <div class="space-y-3 font-sans text-zinc-300 text-[11px] leading-relaxed">
+              <p>
+                To prevent logs from vanishing during mobile browser tabs reloading, standard app restarts, or full desktop refreshes, the applet features an automated <strong class="text-indigo-300">durable server backing cache</strong>.
+              </p>
+              <ul class="list-disc pl-4 space-y-1.5 text-zinc-400 text-[11px]">
+                <li>Every telemetry event you trigger automatically saves in real-time to a local file on the server at <code class="text-brand-purple">/diagnostics_report.txt</code>.</li>
+                <li>When the Diagnostic station opens, it automatically scans and restores previous run histories onto your screen for seamless continuity.</li>
+                <li>To start a fresh clean test without carrying over historical lines, tap <span class="text-amber-400 font-bold font-mono">"Clear"</span>. This will purge the local memory buffer and erase the server file safely.</li>
+                <li>Press <span class="text-white font-bold font-mono">"Copy Log"</span> or <span class="text-emerald-400 font-bold font-mono">"Download (.txt)"</span> to export details and share them with engineering to inspect and troubleshoot internal AudioNode layouts!</li>
+              </ul>
             </div>
           </div>
         </div>

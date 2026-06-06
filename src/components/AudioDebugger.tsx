@@ -335,32 +335,39 @@ export default function AudioDebugger({
       // Ensure no divisions by zero or negative frames
       if (deltaWall > 0.05) {
         const jitterRatio = deltaAudio / deltaWall;
+        const isMusicActive = playingState.A || playingState.B;
+        const isContextRunning = Tone.context.state === 'running';
         
         // Jitter should ideally be ~1.0 in a perfectly scheduled system.
         // If the main thread hangs or garbage collection halts execution, the ratio drops or spikes wildly.
+        // We only trigger stutter alerts when music is actively playing and context is active to prevent false alerts.
         if (jitterRatio < 0.85) {
-          stutterCountRef.current += 1;
-          setStutterDetected(true);
-          
-          logMessage(
-            'WARN', 
-            `⚠️ Web Audio Chronometer Lag Detected! Thread choked by ${(deltaWall * 1000).toFixed(0)}ms. Jitter: ${jitterRatio.toFixed(2)}`,
-            {
-              elapsedAudioDelta: deltaAudio.toFixed(4),
-              elapsedWallDelta: deltaWall.toFixed(4),
-              currentAudioTime: currentAudio.toFixed(3),
-              totalStuttersLog: stutterCountRef.current
-            }
-          );
+          if (isContextRunning && isMusicActive) {
+            stutterCountRef.current += 1;
+            setStutterDetected(true);
+            
+            logMessage(
+              'WARN', 
+              `⚠️ Web Audio Chronometer Lag Detected! Thread choked by ${(deltaWall * 1000).toFixed(0)}ms. Jitter: ${jitterRatio.toFixed(2)}`,
+              {
+                elapsedAudioDelta: deltaAudio.toFixed(4),
+                elapsedWallDelta: deltaWall.toFixed(4),
+                currentAudioTime: currentAudio.toFixed(3),
+                totalStuttersLog: stutterCountRef.current
+              }
+            );
+          }
         } else if (jitterRatio > 1.25) {
-          logMessage(
-            'WARN',
-            `⚠️ Catch-up event detected. Audio clock recovered. Jitter: ${jitterRatio.toFixed(2)}`,
-            {
-              elapsedAudioDelta: deltaAudio.toFixed(4),
-              elapsedWallDelta: deltaWall.toFixed(4)
-            }
-          );
+          if (isContextRunning && isMusicActive) {
+            logMessage(
+              'WARN',
+              `⚠️ Catch-up event detected. Audio clock recovered. Jitter: ${jitterRatio.toFixed(2)}`,
+              {
+                elapsedAudioDelta: deltaAudio.toFixed(4),
+                elapsedWallDelta: deltaWall.toFixed(4)
+              }
+            );
+          }
         }
 
         // Periodic snapshot logging (every 5 seconds under standard telemetry checking)

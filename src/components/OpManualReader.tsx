@@ -109,6 +109,23 @@ export default function OpManualReader() {
         'Sync Build: Run `npm run build` and then sync with `npx cap add android && npx cap sync`.',
         'Android Studio / Xcode: Execute `npx cap open android` to test fully and output signed release APK.'
       ]
+    },
+    {
+      id: 'troubleshooting',
+      title: '07 // TROUBLESHOOTING & SYSTEM LOGS',
+      subtitle: 'Diagnose playback, clipping noise, or hardware clock drift issues',
+      deckAccent: 'both',
+      content: 'If you encounter audio distortion, crackling clicks, speed changes, or drift after a song has looped multiple times, use the interactive diagnostic features:',
+      bullets: [
+        'Live Audio Tester: Tap the "🐞 LIVE AUDIO TESTER" floating button in the bottom right corner to open the real-time diagnostic panel.',
+        'Distortion Flagger: When you hear crackling or pitch distortion, tap the large red "Flag Distortion Event" button. This takes a detailed snapshot of Web Audio clock rates, sampler speed, current position, buffer sizes, and logs it immediately.',
+        'Real-time Observations: Type notes under the "Real-Time Note / Audio Observation" field to describe exactly what you hear, and hit Enter/Log Note. This attaches your description directly to the timeline without causing any audio stutter/disruptions.',
+        'Durable Portability: The diagnostic engine is backed by a local system file. Every event and heartbeat tick automatically saves in real-time directly to "diagnostics_report.txt" in your app workspace, keeping information preserved safe even between browser refreshes or phone screens.',
+        'Log Clears & Splits: To clear previous runs so a new download or report file contains only your latest test run, press "Clear" inside the tester panel. This purges both browser and disk buffers so you can isolate fresh errors.'
+      ],
+      tips: [
+        'Always press "Clear" to flush previous runs when starting a brand new troubleshoot sequence, and press "Copy Log" or download the .txt file of your targeted test once finished!'
+      ]
     }
   ];
 
