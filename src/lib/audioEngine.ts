@@ -397,7 +397,16 @@ export class AudioEngine {
     return buffer;
   }
 
-  async loadTrack(deck: 'A' | 'B', url: string) {
+  async loadTrack(deck: 'A' | 'B', urlOrFile: string | File | Blob) {
+    let url = '';
+    let isDirectFile = false;
+
+    if (typeof urlOrFile === 'string') {
+      url = urlOrFile;
+    } else {
+      isDirectFile = true;
+    }
+
     // Clean up the Tone.js global cache and revoke old Blob URL for the previous track on this deck
     const prevUrl = this.lastLoadedUrls[deck];
     if (prevUrl) {
@@ -417,13 +426,14 @@ export class AudioEngine {
         } catch (e) {}
       }
     }
-    this.lastLoadedUrls[deck] = url;
+    this.lastLoadedUrls[deck] = typeof urlOrFile === 'string' ? urlOrFile : '';
 
     // Completely dispose of the old Tone.Player to cancel any pending downloads or locks
     const oldPlayer = this.getDeck(deck);
     try {
       if (oldPlayer) {
         oldPlayer.stop();
+        oldPlayer.disconnect();
         oldPlayer.dispose();
       }
     } catch (e) {
@@ -442,6 +452,24 @@ export class AudioEngine {
     this.playOffset[deck] = 0;
     this.playStartTime[deck] = 0;
     
+    if (isDirectFile) {
+      try {
+        const fileOrBlob = urlOrFile as File | Blob;
+        const rawCtx = Tone.context?.rawContext || (Tone.context as any)?._context || new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        const arrayBuffer = await fileOrBlob.arrayBuffer();
+        const audioBuffer = await rawCtx.decodeAudioData(arrayBuffer);
+        player.buffer = new Tone.ToneAudioBuffer(audioBuffer);
+        player.loop = true;
+        this.applyRate(deck);
+        return;
+      } catch (err) {
+        console.error(`AudioEngine native decodeAudioData failed for direct file on ${deck}:`, err);
+        // Fall back to synthetic loop if decoding fails
+        url = 'fallback'; 
+      }
+    }
+
     // Intercept default system tracks to load locally processed synthetic loops
     if (url.includes('pixabay.com/audio') && (url.includes('653925c48b') || url.includes('249df9c4d4') || url.includes('6a20803c62'))) {
       try {
@@ -466,6 +494,11 @@ export class AudioEngine {
     }
 
     try {
+      if (typeof (Tone as any).ToneAudioBuffer?.removeFromCache === 'function') {
+        try {
+          (Tone as any).ToneAudioBuffer.removeFromCache(url);
+        } catch (ce) {}
+      }
       await player.load(url);
       player.loop = true;
       this.applyRate(deck); // Ensure rate is correct for new track

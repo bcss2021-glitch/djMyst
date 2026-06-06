@@ -147,9 +147,12 @@ export default function App() {
   useEffect(() => {
     const checkOrientation = () => {
       const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-      const isSmallScreen = window.innerWidth <= 1024;
       const isLand = window.innerWidth > window.innerHeight;
-      setIsMobileLandscape((isTouch || isSmallScreen) && isLand);
+      // Mobile phones in landscape mode typically have very restricted viewport height (usually <= 480px) and width (<= 960px)
+      // Tablets (like iPads) have a landscape height of 768px or more, and PCs are obviously larger
+      const isPhoneLandscapeHeight = window.innerHeight > 0 && window.innerHeight <= 520;
+      const isPhoneLandscapeWidth = window.innerWidth > 0 && window.innerWidth <= 960;
+      setIsMobileLandscape(isTouch && isLand && isPhoneLandscapeHeight && isPhoneLandscapeWidth);
     };
 
     checkOrientation();
@@ -417,8 +420,19 @@ export default function App() {
     setLoadingState(prev => ({ ...prev, [deck]: true }));
 
     try {
-      let resolvedStreamUrl = finalUrl;
-      if (isAudius && !savedId.startsWith('indexeddb:')) {
+      let resolvedStreamUrl: string | File | Blob = finalUrl;
+      
+      if (typeof urlOrId !== 'string') {
+        resolvedStreamUrl = urlOrId;
+      } else if (urlOrId.startsWith('indexeddb:')) {
+        const fileId = urlOrId.substring('indexeddb:'.length);
+        const cachedBlob = await indexedDbCache.getTrack(fileId);
+        if (cachedBlob) {
+          resolvedStreamUrl = cachedBlob;
+        }
+      }
+
+      if (isAudius && typeof urlOrId === 'string' && !savedId.startsWith('indexeddb:')) {
         setIsSearching(true);
         resolvedStreamUrl = await getAudiusStreamUrl(finalUrl);
         setIsSearching(false);
