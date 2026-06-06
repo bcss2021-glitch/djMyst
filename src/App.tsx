@@ -231,6 +231,8 @@ export default function App() {
 
   const [externalUrlInput, setExternalUrlInput] = useState('');
   const [externalTitleInput, setExternalTitleInput] = useState('');
+  const [newCrateName, setNewCrateName] = useState('');
+  const [targetSaveCrate, setTargetSaveCrate] = useState('Manual Submissions');
   const [expandedLists, setExpandedLists] = useState<Record<string, boolean>>({ "Manual Submissions": true });
 
   const [trackInfo, setTrackInfo] = useState({
@@ -1715,69 +1717,319 @@ export default function App() {
     }
 
     if (activeLibraryTab === 'YOUTUBE' || activeLibraryTab === 'SPOTIFY') {
+      const isYT = activeLibraryTab === 'YOUTUBE';
       return (
-        <div className={`h-full flex flex-col gap-4 text-left p-3 overflow-y-auto custom-scrollbar ${showCompact ? 'items-stretch' : 'sm:flex-row items-center justify-center p-6'}`}>
-            <div className={`rounded-full flex items-center justify-center shrink-0 ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'} ${showCompact ? 'w-10 h-10 mx-auto' : 'w-16 h-16'}`}>
-              <Music size={showCompact ? 16 : 28} />
+        <div className="h-full flex flex-col text-left p-3 overflow-y-auto custom-scrollbar select-none">
+          {/* Header Card / Form */}
+          <div className="space-y-3 p-3 rounded-lg bg-white/[0.01] border border-white/5 mb-4 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isYT ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
+                <Music size={14} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-300">{activeLibraryTab} Link Loader</h3>
+                <p className="text-[9px] text-white/30 truncate">Load streams, favorite, and organize them into folders.</p>
+              </div>
             </div>
-            <div className={`flex-1 space-y-2 shrink-0 ${showCompact ? 'text-center' : 'text-left max-w-sm'}`}>
-              <h3 className="text-xs font-bold uppercase tracking-wider">{activeLibraryTab} External Link</h3>
-              {!showCompact && (
-                <p className="text-[10px] text-white/40 leading-relaxed font-sans select-none">
-                  Paste a {activeLibraryTab} link below to load it into a deck. 
-                </p>
-              )}
-              
-              <div className="space-y-2 mt-2 select-none">
-                <input 
-                  type="text" 
-                  value={externalUrlInput}
-                  onChange={(e) => setExternalUrlInput(e.target.value)}
-                  placeholder={`Enter ${activeLibraryTab} URL...`}
-                  className="w-full bg-[#121218] border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-white/20 font-mono"
-                />
-                <input 
-                   type="text"
-                   value={externalTitleInput}
-                   onChange={(e) => setExternalTitleInput(e.target.value)}
-                   placeholder="Enter Custom Track Title (Optional)..."
-                   className="w-full bg-[#121218] border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-zinc-655 focus:outline-none focus:border-white/20 font-mono"
-                />
-                
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      handleLoadExternalLink('A', externalUrlInput);
-                    }}
-                    className={`flex-1 py-1 px-3 text-[9px] font-bold rounded cursor-pointer transition-all uppercase focus:outline-none ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-green-600 text-white hover:bg-green-500'}`}
+
+            <div className="space-y-2">
+              <input 
+                type="text" 
+                value={externalUrlInput}
+                onChange={(e) => setExternalUrlInput(e.target.value)}
+                placeholder={`Enter ${activeLibraryTab} link / URL...`}
+                className="w-full bg-[#121218] border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-cyan-500/40 font-mono"
+              />
+              <input 
+                 type="text"
+                 value={externalTitleInput}
+                 onChange={(e) => setExternalTitleInput(e.target.value)}
+                 placeholder="Track Title / Name (optional)..."
+                 className="w-full bg-[#121218] border border-white/10 rounded-lg p-2 text-[10px] text-white placeholder:text-zinc-650 focus:outline-none focus:border-cyan-500/40 font-mono"
+              />
+
+              {/* Destination Crate Selector & New Crate Form */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5 mt-2">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-bold">Target Playlist Folder</span>
+                  <select
+                    value={targetSaveCrate}
+                    onChange={(e) => setTargetSaveCrate(e.target.value)}
+                    className="w-full bg-[#121218] border border-white/10 rounded px-2 py-1 text-[9px] text-zinc-300 focus:outline-none focus:border-zinc-700 cursor-pointer"
                   >
-                    Load Deck A
-                  </button>
-                  <button 
-                    onClick={() => {
-                      handleLoadExternalLink('B', externalUrlInput);
-                    }}
-                    className={`flex-1 py-1 px-3 text-[9px] font-bold rounded cursor-pointer transition-all uppercase focus:outline-none ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-600 text-white hover:bg-red-500' : 'bg-green-600 text-white hover:bg-green-500'}`}
-                  >
-                    Load Deck B
-                  </button>
+                    {externalLists.map(list => (
+                      <option key={list.name} value={list.name}>{list.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[8px] uppercase tracking-wider text-zinc-500 font-bold">Or Save To New Folder/Crate</span>
+                  <div className="flex gap-1">
+                    <input
+                      type="text"
+                      value={newCrateName}
+                      onChange={(e) => setNewCrateName(e.target.value)}
+                      placeholder="e.g. Club Mix"
+                      className="flex-1 bg-[#121218] border border-white/10 rounded px-2 py-1 text-[9px] text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-zinc-700"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleCreateNewCrate(newCrateName);
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => handleCreateNewCrate(newCrateName)}
+                      className="px-2 py-1 text-[9px] font-bold rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 cursor-pointer"
+                      title="Create Folder"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              {!showCompact && (
-                <div className="p-2 border border-yellow-500/10 bg-yellow-500/[0.02] rounded-lg text-[9px] text-yellow-500/70 font-sans leading-relaxed flex flex-col gap-1 select-none">
-                  <span className="font-bold flex items-center gap-1"><Info size={10} /> CONNECTION NOTICE:</span>
-                  <span>
-                    While track loading and animated waveforms are mapped, live audio playback for {activeLibraryTab === 'YOUTUBE' ? 'YouTube' : 'Spotify'} streams within sandbox iframe containers is currently a work in progress.
-                  </span>
-                </div>
-              )}
+              
+              <div className="flex gap-2 pt-2">
+                <button 
+                  onClick={() => handleLoadExternalLink('A', externalUrlInput)}
+                  disabled={!externalUrlInput}
+                  className={`flex-1 py-1 px-3 text-[9px] font-bold rounded cursor-pointer transition-all uppercase focus:outline-none border disabled:opacity-30 ${isYT ? 'bg-red-600/10 border-red-500/20 text-red-500 hover:bg-red-500/20' : 'bg-green-600/10 border-green-500/20 text-green-500 hover:bg-green-500/20'}`}
+                >
+                  Load Deck A
+                </button>
+                <button 
+                  onClick={() => handleLoadExternalLink('B', externalUrlInput)}
+                  disabled={!externalUrlInput}
+                  className={`flex-1 py-1 px-3 text-[9px] font-bold rounded cursor-pointer transition-all uppercase focus:outline-none border disabled:opacity-30 ${isYT ? 'bg-red-600/10 border-red-500/20 text-red-500 hover:bg-red-500/20' : 'bg-green-600/10 border-green-500/20 text-green-500 hover:bg-green-500/20'}`}
+                >
+                  Load Deck B
+                </button>
+                <button 
+                  onClick={handleAddNewExternalLinkOnly}
+                  disabled={!externalUrlInput}
+                  className="flex-shrink-0 py-1 px-2.5 text-[9px] font-bold rounded bg-cyan-600/15 hover:bg-cyan-600/25 border border-cyan-500/30 text-cyan-400 cursor-pointer"
+                  title="Save Track to Folder Only"
+                >
+                  Save Track
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Saved Playlists & Tracker Card Section */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Title / Backup Actions bar */}
+            <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2 mb-2">
+              <span className="text-[10px] font-black tracking-wider uppercase text-zinc-400">
+                Saved Playlists ({externalLists.reduce((acc, curr) => acc + curr.links.length, 0)})
+              </span>
+              <div className="flex items-center gap-1.5 bg-white/5 px-1.5 py-0.5 rounded">
+                <input 
+                  type="file" 
+                  id="import-external-file-sidebar" 
+                  accept=".json,.txt" 
+                  onChange={importExternalListFile} 
+                  className="hidden" 
+                  multiple
+                />
+                <button
+                  onClick={() => document.getElementById('import-external-file-sidebar')?.click()}
+                  className="p-1 rounded text-zinc-400 hover:text-white cursor-pointer"
+                  title="Import Lists (.json, .txt)"
+                >
+                  <Upload size={10} />
+                </button>
+                <button
+                  onClick={exportExternalLists}
+                  className="p-1 rounded text-zinc-400 hover:text-white cursor-pointer"
+                  title="Export Backup Lists (.json)"
+                >
+                  <Download size={10} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to clear all track lists?")) {
+                      clearAllExternalLists();
+                    }
+                  }}
+                  className="p-1 rounded text-zinc-500 hover:text-red-400 cursor-pointer"
+                  title="Clear All lists"
+                >
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable list of playlists/folders */}
+            <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-0.5 select-none text-[11px]">
+              {externalLists.map((list) => {
+                const isExpanded = expandedLists[list.name] !== false;
+                
+                // Filter links that match current active (YT or Spotify or both, filter specifically if user is on YT vs Spotify tab)
+                const filteredLinks = list.links.filter(link => {
+                  const urlLower = link.url.toLowerCase();
+                  const isLinkYT = urlLower.includes('youtube') || urlLower.includes('youtu.be');
+                  const isLinkSpotify = urlLower.includes('spotify.com');
+                  return isYT ? isLinkYT : isLinkSpotify;
+                });
+
+                return (
+                  <div key={list.name} className="border border-white/5 rounded-lg overflow-hidden bg-white/[0.005]">
+                    {/* Folder Header */}
+                    <div className="flex items-center justify-between px-2 py-1.5 bg-white/[0.02] border-b border-white/5">
+                      <button 
+                        onClick={() => setExpandedLists(prev => ({ ...prev, [list.name]: !isExpanded }))}
+                        className="flex-1 flex items-center gap-1.5 hover:text-white text-zinc-350 text-[10px] cursor-pointer"
+                      >
+                        {isExpanded ? <ChevronDown size={11} className="shrink-0" /> : <ChevronUp size={11} className="shrink-0" />}
+                        <span className="font-mono font-bold truncate max-w-[125px] text-left">{list.name}</span>
+                        <span className="text-[8px] text-zinc-500 bg-black/40 px-1.5 py-0.5 rounded font-bold font-mono shrink-0">
+                          {filteredLinks.length}
+                        </span>
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to clear/delete folder "${list.name}"?`)) {
+                            deleteExternalList(list.name);
+                          }
+                        }}
+                        className="p-0.5 text-zinc-500 hover:text-red-400 rounded hover:bg-white/5 transition-all cursor-pointer shrink-0"
+                        title={`Delete folder ${list.name}`}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+
+                    {/* Group Links Folder contents */}
+                    {isExpanded && (
+                      <div className="divide-y divide-white/5 text-[11px]">
+                        {filteredLinks.length > 0 ? (
+                          filteredLinks.map((link) => {
+                            const isGlobalFav = favorites.some(f => f.id === link.id || f.url === link.url);
+                            const isInPlaylist = playlist.some(p => p.id === link.id || p.url === link.url);
+                            
+                            return (
+                              <div key={link.id} className="flex flex-col p-2 gap-1.5 hover:bg-white/[0.015] transition-all group">
+                                {/* Title and URL */}
+                                <div className="text-left">
+                                  <span className="text-[10px] font-semibold text-zinc-200 block truncate leading-tight group-hover:text-white" title={link.title}>
+                                    {link.title}
+                                  </span>
+                                  <span className="text-[8px] text-zinc-500 font-mono block truncate" title={link.url}>
+                                    {link.url}
+                                  </span>
+                                </div>
+
+                                {/* Controls Row */}
+                                <div className="flex items-center justify-between gap-1 border-t border-white/[0.02] pt-1.5">
+                                  {/* Load controls */}
+                                  <div className="flex gap-1 shrink-0">
+                                    <button
+                                      onClick={() => handleLoadExternalLink('A', link.url, link.title)}
+                                      className="px-1.5 py-0.5 text-[8px] font-bold rounded bg-blue-600/15 hover:bg-blue-600/30 text-blue-400 border border-blue-500/20 active:scale-95 transition-all uppercase cursor-pointer"
+                                      title="Load A"
+                                    >
+                                      Load A
+                                    </button>
+                                    <button
+                                      onClick={() => handleLoadExternalLink('B', link.url, link.title)}
+                                      className="px-1.5 py-0.5 text-[8px] font-bold rounded bg-purple-600/15 hover:bg-purple-600/30 text-purple-400 border border-purple-500/20 active:scale-95 transition-all uppercase cursor-pointer"
+                                      title="Load B"
+                                    >
+                                      Load B
+                                    </button>
+                                  </div>
+
+                                  {/* Action Utilities (Paste, Global Favorites, Playlist, Delete) */}
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      onClick={() => {
+                                        setExternalUrlInput(link.url);
+                                        setExternalTitleInput(link.title);
+                                      }}
+                                      className="px-1.5 py-0.5 text-[8px] font-medium text-zinc-400 bg-[#121218] hover:bg-zinc-800 hover:text-white rounded font-mono transition-colors cursor-pointer"
+                                      title="Fill edit fields"
+                                    >
+                                      Paste
+                                    </button>
+                                    
+                                    {/* Global Session Favorites Toggle - syncs beautifully */}
+                                    <button 
+                                      onClick={() => toggleFavorite({ 
+                                        id: link.id, 
+                                        title: link.title, 
+                                        artist: isYT ? 'YouTube Stream' : 'Spotify Stream', 
+                                        url: link.url 
+                                      })}
+                                      className={`p-1 rounded hover:bg-white/5 transition-all cursor-pointer ${isGlobalFav ? 'text-rose-500 bg-rose-500/10' : 'text-zinc-500 hover:text-rose-450'}`}
+                                      title={isGlobalFav ? "Remove from Favorites" : "Add to Favorites"}
+                                    >
+                                      <Heart size={10} fill={isGlobalFav ? "currentColor" : "none"} />
+                                    </button>
+
+                                    {/* Playlist (Main Set Playlist toggle) */}
+                                    <button 
+                                      onClick={() => {
+                                        if (isInPlaylist) {
+                                          removeFromPlaylist(link.id);
+                                        } else {
+                                          addToPlaylist({ 
+                                            id: link.id, 
+                                            title: link.title, 
+                                            artist: isYT ? 'YouTube Stream' : 'Spotify Stream', 
+                                            url: link.url 
+                                          });
+                                        }
+                                      }}
+                                      className={`p-1 rounded hover:bg-white/5 transition-all cursor-pointer ${isInPlaylist ? 'text-purple-400 bg-purple-500/10' : 'text-zinc-500 hover:text-purple-400'}`}
+                                      title={isInPlaylist ? "Remove from Set Playlist" : "Add to Set Playlist"}
+                                    >
+                                      <ListPlus size={10} />
+                                    </button>
+
+                                    {/* Delete Link button */}
+                                    <button 
+                                      onClick={() => deleteExternalLink(list.name, link.id)}
+                                      className="p-1 hover:bg-white/5 rounded hover:text-red-500 text-zinc-500 transition-colors cursor-pointer"
+                                      title="Delete Track from list"
+                                    >
+                                      <Trash2 size={10} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="py-3 text-center text-[9px] text-zinc-650 italic leading-normal px-2">
+                            No saved {isYT ? 'YouTube' : 'Spotify'} links in this Crate folder.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       );
     }
 
     return null;
+  };
+
+  const handleCreateNewCrate = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (externalLists.some(l => l.name.toLowerCase() === trimmed.toLowerCase())) {
+      alert(`A playlist folder named "${trimmed}" already exists.`);
+      return;
+    }
+    setExternalLists(prev => [...prev, { name: trimmed, links: [] }]);
+    setTargetSaveCrate(trimmed);
+    setNewCrateName('');
   };
 
   const handleLoadExternalLink = (deck: 'A' | 'B', url: string, customTitle?: string) => {
@@ -1788,7 +2040,7 @@ export default function App() {
     // Load track onto the deck
     loadTrack(deck, finalTitle, url);
     
-    // Auto-save to 'Manual Submissions' if not already present in ANY of the lists
+    // Auto-save to targetSaveCrate if not already present in ANY of the lists
     const linkExists = externalLists.some(list => list.links.some(lnk => lnk.url.trim() === url.trim()));
     if (!linkExists) {
       const newLnk: SavedExternalLink = {
@@ -1801,7 +2053,8 @@ export default function App() {
       
       setExternalLists(prev => {
         const next = [...prev];
-        const manualIdx = next.findIndex(l => l.name === 'Manual Submissions');
+        const targetName = targetSaveCrate || 'Manual Submissions';
+        const manualIdx = next.findIndex(l => l.name === targetName);
         if (manualIdx !== -1) {
           next[manualIdx] = {
             ...next[manualIdx],
@@ -1809,7 +2062,7 @@ export default function App() {
           };
         } else {
           next.unshift({
-            name: 'Manual Submissions',
+            name: targetName,
             links: [newLnk]
           });
         }
@@ -1838,7 +2091,8 @@ export default function App() {
 
     setExternalLists(prev => {
       const next = [...prev];
-      const manualIdx = next.findIndex(l => l.name === 'Manual Submissions');
+      const targetName = targetSaveCrate || 'Manual Submissions';
+      const manualIdx = next.findIndex(l => l.name === targetName);
       if (manualIdx !== -1) {
         next[manualIdx] = {
           ...next[manualIdx],
@@ -1846,7 +2100,7 @@ export default function App() {
         };
       } else {
         next.unshift({
-          name: 'Manual Submissions',
+          name: targetName,
           links: [newLnk]
         });
       }
@@ -3179,241 +3433,8 @@ export default function App() {
             )}
 
             {(activeLibraryTab === 'YOUTUBE' || activeLibraryTab === 'SPOTIFY') && (
-              <div className="h-full flex flex-col items-center justify-center p-4 lg:p-8 max-w-xl mx-auto text-center gap-4">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center ${activeLibraryTab === 'YOUTUBE' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
-                      <Music size={32} />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-bold uppercase tracking-wider">{activeLibraryTab} External Link</h3>
-                    <p className="text-[10px] text-white/40 leading-relaxed">
-                      Paste a {activeLibraryTab} link below to load it into a deck. 
-                    </p>
-                  </div>
-                  
-                  <div className="w-full flex gap-2 flex-col sm:flex-row">
-                    <input 
-                      type="text" 
-                      value={externalUrlInput}
-                      onChange={(e) => setExternalUrlInput(e.target.value)}
-                      placeholder={`Enter ${activeLibraryTab} URL (e.g. https://...)...`}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] focus:outline-none focus:border-cyan-500 transition-all font-mono text-white/90"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleLoadExternalLink('A', externalUrlInput);
-                        }
-                      }}
-                    />
-                    <input 
-                      type="text" 
-                      value={externalTitleInput}
-                      onChange={(e) => setExternalTitleInput(e.target.value)}
-                      placeholder="Custom Title / Name (optional)..."
-                      className="w-full sm:w-1/3 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[10px] focus:outline-none focus:border-cyan-500 transition-all text-white/90"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
-                     <button 
-                       onClick={() => handleLoadExternalLink('A', externalUrlInput)}
-                       disabled={!externalUrlInput}
-                       className="px-4 py-2 rounded bg-blue-600/20 border border-blue-500/40 text-blue-400 text-[10px] font-bold uppercase hover:bg-blue-600/40 disabled:opacity-40 disabled:hover:bg-blue-600/20 transition-all cursor-pointer font-sans"
-                     >
-                       Load Deck A
-                     </button>
-                     <button 
-                       onClick={() => handleLoadExternalLink('B', externalUrlInput)}
-                       disabled={!externalUrlInput}
-                       className="px-4 py-2 rounded bg-purple-600/20 border border-purple-500/40 text-purple-400 text-[10px] font-bold uppercase hover:bg-purple-600/40 disabled:opacity-40 disabled:hover:bg-purple-600/20 transition-all cursor-pointer font-sans"
-                     >
-                       Load Deck B
-                     </button>
-                     <button 
-                       onClick={handleAddNewExternalLinkOnly}
-                       disabled={!externalUrlInput}
-                       className="col-span-2 px-4 py-1.5 rounded bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase hover:bg-emerald-600/20 disabled:opacity-40 disabled:hover:bg-emerald-600/10 transition-all flex items-center justify-center gap-1 cursor-pointer font-sans"
-                     >
-                       <Plus size={11} /> Save Track to Tracker Only
-                     </button>
-                  </div>
-
-                  {/* WORK IN PROGRESS NOTICE */}
-                  <div className="mt-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/30 w-full max-w-xl text-left">
-                     <div className="flex items-center gap-2 text-amber-500 text-[10px] font-black tracking-widest uppercase mb-1.5">
-                        <Activity size={12} className="text-amber-500 animate-pulse" /> [ WORK IN PROGRESS ]
-                     </div>
-                     <h5 className="text-[10px] text-amber-400/90 font-bold leading-snug mb-1">
-                        Active Stream Integration Dev Phase
-                     </h5>
-                     <p className="text-[9px] text-zinc-400 leading-relaxed">
-                        While track loading and animated waveforms are mapped, live audio playback for {activeLibraryTab === 'YOUTUBE' ? 'YouTube' : 'Spotify'} streams within sandbox iframe containers is currently a work in progress. We are working diligently to routing-link these outputs for future updates!
-                     </p>
-                  </div>
-
-                  <div className="mt-2 p-4 rounded-lg bg-orange-500/5 border border-orange-500/20 w-full max-w-xl">
-                     <div className="flex items-center gap-2 text-orange-400 text-[9px] font-bold uppercase mb-1">
-                        <Info size={12} /> External Source Disclaimer
-                     </div>
-                     <p className="text-[9px] text-orange-400/60 leading-relaxed italic text-left">
-                        Standard browser-based DJ effects like **Scratching, Pitch-Shifting, and EQ Isolators** are disabled for {activeLibraryTab} streams. These tracks will play at original speed and fidelity. {activeLibraryTab === 'YOUTUBE' ? 'Premium accounts bypass ads natively.' : 'Spotify requires active session in browser.'}
-                     </p>
-                  </div>
-
-                  {/* External Lists Tracker */}
-                  <div className="w-full mt-6 text-left border-t border-white/10 pt-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-2">
-                        <ListPlus size={16} className="text-zinc-400" />
-                        <h4 className="text-[11px] font-bold tracking-wider uppercase text-zinc-300">Saved Links Tracker ({externalLists.reduce((acc, curr) => acc + curr.links.length, 0)})</h4>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <input 
-                          type="file" 
-                          id="import-external-file" 
-                          accept=".json,.txt" 
-                          onChange={importExternalListFile} 
-                          className="hidden" 
-                          multiple
-                        />
-                        <button
-                          onClick={() => document.getElementById('import-external-file')?.click()}
-                          className="flex items-center gap-1 px-2.5 py-1 text-[9px] rounded bg-zinc-800 hover:bg-zinc-700 font-bold uppercase text-zinc-300 transition-all border border-zinc-700 cursor-pointer font-sans"
-                          title="Import local file list (.json, .txt)"
-                        >
-                          <Upload size={10} /> Import
-                        </button>
-                        <button
-                          onClick={exportExternalLists}
-                          className="flex items-center gap-1 px-2.5 py-1 text-[9px] rounded bg-zinc-800 hover:bg-zinc-700 font-bold uppercase text-zinc-300 transition-all border border-zinc-700 cursor-pointer font-sans"
-                          title="Download list backup (.json)"
-                        >
-                          <Download size={10} /> Export
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (window.confirm("Are you sure you want to clear all track lists?")) {
-                              clearAllExternalLists();
-                            }
-                          }}
-                          className="flex items-center gap-1 px-2.5 py-1 text-[9px] rounded bg-red-950/40 hover:bg-red-900/40 font-bold uppercase text-red-500 transition-all border border-red-500/20 cursor-pointer font-sans"
-                          title="Clear all track lists"
-                        >
-                          <Trash2 size={10} /> Clear All
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 select-none scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 w-full">
-                      {externalLists.map((list) => {
-                        const isExpanded = expandedLists[list.name] !== false;
-                        return (
-                          <div key={list.name} className="bg-white/[0.01] border border-white/5 rounded-lg overflow-hidden w-full">
-                            {/* Group Header */}
-                            <div className="flex items-center justify-between px-3 py-2 bg-white/[0.03] border-b border-white/5">
-                              <button 
-                                onClick={() => setExpandedLists(prev => ({ ...prev, [list.name]: !isExpanded }))}
-                                className="flex items-center gap-2 hover:text-white text-zinc-300 transition-all cursor-pointer"
-                              >
-                                {isExpanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-                                <span className="font-mono text-[10px] font-bold">{list.name}</span>
-                                <span className="text-[9px] text-zinc-500 bg-black/30 px-1.5 py-0.5 rounded font-bold font-mono">
-                                  {list.links.length}
-                                </span>
-                              </button>
-
-                              <button 
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to clear "${list.name}"?`)) {
-                                    deleteExternalList(list.name);
-                                  }
-                                }}
-                                className="p-1 text-zinc-500 hover:text-red-400 rounded hover:bg-white/5 transition-all cursor-pointer"
-                                title={`Delete ${list.name}`}
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-
-                            {/* Group Links Table */}
-                            {isExpanded && (
-                              <div className="p-1 divide-y divide-white/5 font-sans">
-                                {list.links.length > 0 ? (
-                                  list.links.map((link) => {
-                                    const isFav = !!link.isFavorite;
-                                    const isYT = link.url.includes('youtube') || link.url.includes('youtu.be');
-                                    return (
-                                      <div key={link.id} className="flex gap-2 items-center justify-between p-2 hover:bg-white/[0.02] transition-all group rounded border border-transparent">
-                                        <div className="flex-1 min-w-0 text-left">
-                                          <div className="flex items-center gap-1.5 mb-0.5">
-                                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isYT ? 'bg-red-500' : 'bg-green-500'}`} />
-                                            <span className="text-[10px] font-semibold text-zinc-200 truncate block">
-                                              {link.title}
-                                            </span>
-                                          </div>
-                                          <span className="text-[8px] text-zinc-500 font-mono block truncate max-w-[280px]">
-                                            {link.url}
-                                          </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          {/* Load direct A */}
-                                          <button
-                                            onClick={() => handleLoadExternalLink('A', link.url, link.title)}
-                                            className="px-1.5 py-0.5 text-[8px] font-bold rounded bg-blue-600/10 hover:bg-blue-600/30 text-blue-400 border border-blue-500/20 active:scale-95 transition-all uppercase cursor-pointer"
-                                            title="Load to Deck A"
-                                          >
-                                            Deck A
-                                          </button>
-                                          {/* Load direct B */}
-                                          <button
-                                            onClick={() => handleLoadExternalLink('B', link.url, link.title)}
-                                            className="px-1.5 py-0.5 text-[8px] font-bold rounded bg-purple-600/10 hover:bg-purple-600/30 text-purple-400 border border-purple-500/20 active:scale-95 transition-all uppercase cursor-pointer"
-                                            title="Load to Deck B"
-                                          >
-                                            Deck B
-                                          </button>
-                                          {/* Place into link field */}
-                                          <button
-                                            onClick={() => {
-                                              setExternalUrlInput(link.url);
-                                              setExternalTitleInput(link.title);
-                                            }}
-                                            className="p-1 px-1.5 text-[8px] font-semibold text-zinc-400 bg-zinc-850 hover:bg-zinc-700 hover:text-white rounded transition-all font-mono cursor-pointer"
-                                            title="Fill edit fields above"
-                                          >
-                                            Paste
-                                          </button>
-                                          {/* Favorite */}
-                                          <button 
-                                            onClick={() => toggleExternalLinkFavorite(list.name, link.id)}
-                                            className="p-1 hover:bg-white/5 rounded transition-all cursor-pointer hover:text-red-400 text-zinc-650"
-                                          >
-                                            <Heart size={11} className={isFav ? "text-red-500 fill-red-500" : "currentColor"} />
-                                          </button>
-                                          {/* Delete link */}
-                                          <button 
-                                            onClick={() => deleteExternalLink(list.name, link.id)}
-                                            className="p-1 hover:bg-white/5 rounded hover:text-red-400 text-zinc-500 transition-all cursor-pointer"
-                                            title="Delete track"
-                                          >
-                                            <Trash2 size={11} />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })
-                                ) : (
-                                  <div className="py-4 text-center text-[9px] text-zinc-600 italic">
-                                    No tracks in this list. Submit links above or import files.
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {renderLibraryContent(false)}
               </div>
             )}
         </div>
