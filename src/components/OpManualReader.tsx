@@ -144,18 +144,18 @@ export default function OpManualReader({ showDiagnosticsWidget = true, onToggleD
   return (
     <div className="h-full flex flex-col bg-[#0b0b0e] border border-white/5 rounded-lg overflow-hidden select-none font-sans text-white/90">
       {/* Search and Action Bar */}
-      <div className="p-3 bg-zinc-950/60 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+      <div className="p-3 bg-zinc-950/60 border-b border-white/5 flex flex-col gap-2.5 shrink-0">
         <div className="flex items-center gap-2">
-          <BookOpen className="text-indigo-400" size={16} />
-          <h3 className="text-xs font-bold font-display uppercase tracking-wider text-indigo-400">CONSOLE OPERATIONS REFERENCE</h3>
+          <BookOpen className="text-indigo-400 shrink-0" size={14} />
+          <h3 className="text-[10.5px] font-bold font-display uppercase tracking-wider text-indigo-400">CONSOLE OPERATIONS REFERENCE</h3>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <a 
             href="/instruction_manual.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-bold rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 transition-all font-sans"
+            className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[9px] font-black rounded bg-indigo-500/15 border border-indigo-500/20 text-indigo-300 hover:bg-indigo-500/25 transition-all font-mono"
             title="Open comprehensive manual in full browser window"
           >
             <ExternalLink size={10} /> OPEN FULL MANUAL
@@ -163,10 +163,10 @@ export default function OpManualReader({ showDiagnosticsWidget = true, onToggleD
           <a 
             href="/instruction_manual.html"
             download="dj_studio_operator_manual.html"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-bold rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-all font-sans"
+            className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[9px] font-black rounded bg-emerald-500/15 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/25 transition-all font-mono"
             title="Download full offline HTML Operator's Manual with retro terminal visual dashboard"
           >
-            <Download size={10} /> DOWNLOAD HTML
+            <Download size={10} /> DOWNLOAD REF MANUAL (HTML)
           </a>
         </div>
       </div>
@@ -185,23 +185,23 @@ export default function OpManualReader({ showDiagnosticsWidget = true, onToggleD
       </div>
 
       {onToggleDiagnostics && (
-        <div className="mx-3 my-2 p-2 bg-[#121218] rounded border border-indigo-500/15 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${showDiagnosticsWidget ? 'bg-indigo-400 animate-pulse' : 'bg-zinc-650'}`}></span>
-            <span className="text-[10px] font-mono tracking-wide text-zinc-400 uppercase">
-              Floating Diagnostics Panel: <strong className={showDiagnosticsWidget ? 'text-indigo-450 font-black' : 'text-zinc-500'}>{showDiagnosticsWidget ? 'VISIBLE' : 'MUTED / HIDDEN'}</strong>
+        <div className="mx-3 my-2 p-2 bg-[#121218] rounded border border-indigo-500/15 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${showDiagnosticsWidget ? 'bg-indigo-400 animate-pulse' : 'bg-zinc-600'}`}></span>
+            <span className="text-[9.5px] font-mono tracking-wide text-zinc-400 uppercase truncate">
+              Floating diagnostics: <strong className={showDiagnosticsWidget ? 'text-indigo-400 font-bold' : 'text-zinc-500'}>{showDiagnosticsWidget ? 'ON' : 'OFF'}</strong>
             </span>
           </div>
           <button
             type="button"
             onClick={() => onToggleDiagnostics(!showDiagnosticsWidget)}
-            className={`px-2.5 py-1 text-[8.5px] font-mono font-black uppercase rounded cursor-pointer transition-all duration-150 shrink-0 ${
+            className={`px-3 py-1 text-[9px] font-mono font-black uppercase rounded cursor-pointer transition-all duration-150 shrink-0 ${
               showDiagnosticsWidget 
                 ? 'bg-zinc-850 hover:bg-zinc-800 text-zinc-300 border border-white/5' 
-                : 'bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.12)] animate-pulse'
+                : 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.15)] animate-pulse'
             }`}
           >
-            {showDiagnosticsWidget ? '🙈 TEMPORARY HIDE FLOATING WIDGET' : '👁️ RESTORE FLOATING WIDGET'}
+            {showDiagnosticsWidget ? '🙈 HIDE WIDGET' : '👁️ SHOW WIDGET'}
           </button>
         </div>
       )}

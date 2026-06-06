@@ -1256,6 +1256,12 @@ export default function Deck({
 
       {/* Header Deck Info Tray - Unified Cohesive LCD Panel */}
       <div className="w-full px-3 z-10 font-mono shrink-0 mb-2">
+         {/* Base BPM alignment above the LCD Display on the top right */}
+         <div className="flex justify-end items-center px-1 mb-0.5 select-none">
+            <span className="text-[8px] text-zinc-400 font-bold uppercase tracking-wider">
+               BASE: <strong className="text-brand-cyan font-black">{baseBpm.toFixed(0)} BPM</strong>
+            </span>
+         </div>
          <div className="bg-black/80 border border-white/5 rounded-md shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.8)] p-2 grid grid-cols-3 gap-2 items-stretch min-h-[58px] select-none h-[58px]">
             
             {/* STATUS COLUMN */}
@@ -1286,8 +1292,7 @@ export default function Deck({
                <span className="text-[7px] font-black uppercase tracking-[0.2em] text-zinc-500 text-right">SPEED / PITCH</span>
                <div className="flex items-center gap-1.5 justify-end w-full flex-1 min-h-0">
                   <div className="text-right tabular-nums flex flex-col items-end leading-tight justify-center">
-                     <span className="text-[10.5px] font-bold text-brand-cyan">{((playbackRate - 1) * 100).toFixed(1)}%</span>
-                     <span className="text-[6.5px] text-zinc-500 font-bold uppercase tracking-wider">BASE: {baseBpm.toFixed(0)} BPM</span>
+                     <span className="text-[11.5px] font-black text-brand-cyan">{((playbackRate - 1) * 100).toFixed(1)}%</span>
                   </div>
                   <button
                     onClick={onBpmTap}
