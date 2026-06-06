@@ -35,10 +35,14 @@ export default function AudioDebugger({
   const [copied, setCopied] = useState(false);
   const [stutterDetected, setStutterDetected] = useState(false);
   const [cpuWarning, setCpuWarning] = useState(false);
-  const [userNote, setUserNote] = useState('');
+  const [fileSaveStatus, setFileSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const noteInputRef = useRef<HTMLInputElement>(null);
 
   // Raw logs buffered in a ref to avoid React performance choke while playing
   const allLogsRef = useRef<string[]>([]);
+  // Store any unsaved logs to flush to the server
+  const unsavedLogsRef = useRef<string[]>([]);
+  
   // Visual logs state only shows the last 30 items for visual performance
   const [visibleLogs, setVisibleLogs] = useState<string[]>([]);
   const [logCount, setLogCount] = useState(0);
@@ -49,6 +53,82 @@ export default function AudioDebugger({
   const driftCheckIntervalRef = useRef<any>(null);
   const stutterCountRef = useRef<number>(0);
 
+  // Helper: Flush the unsaved logs buffer to the backend Express server-side file
+  const flushLogsToServer = async () => {
+    if (unsavedLogsRef.current.length === 0) return;
+    
+    // Copy reference and clear local buffer immediately to avoid race conditions
+    const itemsPending = [...unsavedLogsRef.current];
+    unsavedLogsRef.current = [];
+    
+    setFileSaveStatus('saving');
+    try {
+      const response = await fetch('/api/diagnostics/append', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: itemsPending.join('\n') })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP Error ${response.status}`);
+      }
+      setFileSaveStatus('saved');
+      // Revert status to idle after a small delay
+      setTimeout(() => setFileSaveStatus('idle'), 2000);
+    } catch (e) {
+      console.error('[Diagnostics Sync Error] Failed to write to disk:', e);
+      setFileSaveStatus('error');
+      // Restore the items back to the buffer to ensure they are not lost
+      unsavedLogsRef.current = [...itemsPending, ...unsavedLogsRef.current];
+    }
+  };
+
+  // Check and read any existing log entries from previous runs on mount
+  useEffect(() => {
+    const fetchExistingLogs = async () => {
+      try {
+        const response = await fetch('/api/diagnostics/read');
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.success && resJson.content) {
+            const rawLines = resJson.content.split('\n').filter((l: string) => l.trim().length > 0);
+            if (rawLines.length > 0) {
+              allLogsRef.current = [...rawLines];
+              // Load the last 30 entries into visible logs
+              const tailCount = Math.min(30, rawLines.length);
+              setVisibleLogs(rawLines.slice(rawLines.length - tailCount));
+              setLogCount(rawLines.length);
+              
+              // Log a system note that historical log has been restored
+              const restoredFlag = `[${new Date().toLocaleTimeString()}] [INFO] === RESTORED HISTORICAL LOGS FROM PORTABLE FILE ON DISK (${rawLines.length} traces found) ===`;
+              allLogsRef.current.push(restoredFlag);
+              setVisibleLogs(prev => [...prev, restoredFlag]);
+              setLogCount(allLogsRef.current.length);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[Diagnostics Loading error]', err);
+      }
+    };
+    fetchExistingLogs();
+  }, []);
+
+  // Flush any remaining buffered logs to the server every 3 seconds if active
+  useEffect(() => {
+    let flushInterval: any = null;
+    if (isLogging) {
+      flushInterval = setInterval(() => {
+        flushLogsToServer();
+      }, 3000);
+    }
+    return () => {
+      if (flushInterval) clearInterval(flushInterval);
+      // Flush any lingering entries when logging stops
+      flushLogsToServer();
+    };
+  }, [isLogging]);
+
   // Helper: Append a new log line with precise timestamp
   const logMessage = (type: 'INFO' | 'SUCCESS' | 'WARN' | 'ERROR' | 'EVENT', message: string, extraJson?: any) => {
     const d = new Date();
@@ -57,6 +137,7 @@ export default function AudioDebugger({
     const logLine = `[${timeStr}] [${type}] ${message}${extraStr}`;
     
     allLogsRef.current.push(logLine);
+    unsavedLogsRef.current.push(logLine);
     
     // Update visual log stream
     setVisibleLogs(prev => {
@@ -67,6 +148,11 @@ export default function AudioDebugger({
       return next;
     });
     setLogCount(allLogsRef.current.length);
+
+    // If critical alert or event, flush immediately to guarantee preservation
+    if (type === 'EVENT' || type === 'ERROR' || unsavedLogsRef.current.length >= 8) {
+      flushLogsToServer();
+    }
   };
 
   // Helper: Generate a full snapshot of the audio system state
@@ -153,32 +239,50 @@ export default function AudioDebugger({
       startLogging();
     }
     const snap = getSystemSnapshot();
-    const noteSuffix = userNote.trim() ? ` | Obs: "${userNote.trim()}"` : '';
+    const currentNoteValue = noteInputRef.current?.value || '';
+    const noteSuffix = currentNoteValue.trim() ? ` | Obs: "${currentNoteValue.trim()}"` : '';
     logMessage('EVENT', `🚨 *** USER FLAGGED DISTORTION MOMENT ***${noteSuffix}`, snap);
-    if (userNote.trim()) {
-      setUserNote('');
+    if (noteInputRef.current) {
+      noteInputRef.current.value = '';
     }
   };
 
   // Submit standard type notes to the debugger console list
   const submitNoteToLog = () => {
-    if (!userNote.trim()) return;
+    const currentNoteValue = noteInputRef.current?.value || '';
+    if (!currentNoteValue.trim()) return;
     if (!isLogging) {
       startLogging();
     }
     const snap = getSystemSnapshot();
-    logMessage('EVENT', `📝 USER NOTE: "${userNote.trim()}"`, snap);
-    setUserNote('');
+    logMessage('EVENT', `📝 USER NOTE: "${currentNoteValue.trim()}"`, snap);
+    if (noteInputRef.current) {
+      noteInputRef.current.value = '';
+    }
   };
 
   // Clear logs action
-  const clearLogs = () => {
+  const clearLogs = async () => {
     allLogsRef.current = [];
+    unsavedLogsRef.current = [];
     setVisibleLogs([]);
     setLogCount(0);
     setStutterDetected(false);
     setCpuWarning(false);
     stutterCountRef.current = 0;
+    
+    // Purge server file
+    try {
+      setFileSaveStatus('saving');
+      const response = await fetch('/api/diagnostics/clear', { method: 'POST' });
+      if (response.ok) {
+        setFileSaveStatus('saved');
+        setTimeout(() => setFileSaveStatus('idle'), 1500);
+      }
+    } catch (e) {
+      console.error('[Diagnostics Clear Error] Failed to purge server log file:', e);
+      setFileSaveStatus('error');
+    }
   };
 
   // Copy to clipboard
@@ -333,6 +437,37 @@ export default function AudioDebugger({
               </button>
             </div>
 
+            {/* Disk File Save Status Bar */}
+            <div className="px-4 py-1.5 bg-[#171723]/95 border-b border-white/10 flex items-center justify-between text-[9px] font-mono select-none shrink-0">
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <span className="text-blue-400">💾</span>
+                <span className="font-bold">FILE BACKED:</span>
+                <span className="bg-black/40 px-1.5 py-0.5 rounded text-[8px] text-indigo-300 border border-indigo-500/10">diagnostics_report.txt</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {fileSaveStatus === 'idle' && (
+                  <span className="text-slate-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span> IDLE / READY
+                  </span>
+                )}
+                {fileSaveStatus === 'saving' && (
+                  <span className="text-[#3b82f6] flex items-center gap-1 animate-pulse font-bold">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span> AUTO-SAVING TO DISK...
+                  </span>
+                )}
+                {fileSaveStatus === 'saved' && (
+                  <span className="text-emerald-400 flex items-center gap-1 font-bold animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> COPIED ON DISK
+                  </span>
+                )}
+                {fileSaveStatus === 'error' && (
+                  <span className="text-red-400 flex items-center gap-1 font-bold animate-bounce">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span> DISK WRITE ERROR
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Quick Action Dashboard */}
             <div className="p-4 bg-[#101016] border-b border-white/15 flex flex-col gap-3 shrink-0">
               <div className="grid grid-cols-2 gap-3">
@@ -392,19 +527,16 @@ export default function AudioDebugger({
                   <span className="text-[9px] text-indigo-400 font-mono tracking-widest uppercase flex items-center gap-1.5 font-bold">
                     ✍️ Real-Time Note / Audio Observation
                   </span>
-                  {userNote.trim() && (
-                    <span className="text-[8px] text-indigo-400 font-mono italic animate-pulse">
-                      Enter key logs note
-                    </span>
-                  )}
+                  <span className="text-[8px] text-indigo-400 font-mono italic opacity-60">
+                    Press Enter to Log
+                  </span>
                 </div>
                 
                 <div className="flex gap-2 mt-1">
                   <input
                     id="input-diagnostic-user-note"
+                    ref={noteInputRef}
                     type="text"
-                    value={userNote}
-                    onChange={(e) => setUserNote(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         submitNoteToLog();
@@ -416,12 +548,7 @@ export default function AudioDebugger({
                   <button
                     id="btn-submit-user-note"
                     onClick={submitNoteToLog}
-                    disabled={!userNote.trim()}
-                    className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-tight transition-all duration-150 ${
-                      userNote.trim()
-                        ? 'bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white shadow-md shadow-indigo-500/20'
-                        : 'bg-indigo-950/30 text-indigo-500/50 border border-indigo-950/50 cursor-not-allowed'
-                    }`}
+                    className="px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-tight bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white shadow-md shadow-indigo-500/20 duration-150 transition-all cursor-pointer"
                   >
                     Log Note
                   </button>

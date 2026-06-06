@@ -1,0 +1,86 @@
+import express from "express";
+import path from "path";
+import fs from "fs";
+import { createServer as createViteServer } from "vite";
+
+async function startServer() {
+  const app = express();
+  const PORT = 3000;
+
+  // Use JSON and Text body parsers
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.text({ limit: '50mb' }));
+
+  const logFilePath = path.join(process.cwd(), "diagnostics_report.txt");
+
+  // API endpoint to append logs to diagnostics_report.txt
+  app.post("/api/diagnostics/append", (req, res) => {
+    try {
+      const { text, snap } = req.body;
+      const contentToAppend = text || "";
+      
+      // Append content to local file
+      fs.appendFileSync(logFilePath, contentToAppend + "\n", "utf8");
+      
+      console.log(`[Diagnostics] Appended ${contentToAppend.length} characters to external file diagnostics_report.txt`);
+      res.json({ success: true, message: "Logs appended successfully.", filePath: logFilePath });
+    } catch (error: any) {
+      console.error("[Diagnostics Error] Failed to append logs:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // API endpoint to retrieve full diagnostics file
+  app.get("/api/diagnostics/read", (req, res) => {
+    try {
+      if (fs.existsSync(logFilePath)) {
+        const content = fs.readFileSync(logFilePath, "utf8");
+        res.json({ success: true, content });
+      } else {
+        res.json({ success: true, content: "" });
+      }
+    } catch (error: any) {
+      console.error("[Diagnostics Error] Failed to read logs:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // API endpoint to clear the diagnostics log file
+  app.post("/api/diagnostics/clear", (req, res) => {
+    try {
+      fs.writeFileSync(logFilePath, "", "utf8");
+      res.json({ success: true, message: "Diagnostics file cleared." });
+    } catch (error: any) {
+      console.error("[Diagnostics Error] Failed to clear logs:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", mode: process.env.NODE_ENV || "development" });
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[full-stack] Server running on http://localhost:${PORT}`);
+  });
+}
+
+startServer().catch((err) => {
+  console.error("Failed to start server:", err);
+});
