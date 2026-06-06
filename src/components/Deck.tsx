@@ -1086,7 +1086,7 @@ export default function Deck({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col items-center justify-between py-3 flex-1 h-full relative hardware-panel ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
+      className={`flex flex-col items-center justify-between py-3 flex-1 h-full relative hardware-panel overflow-y-auto custom-scrollbar ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
     >
       {/* Drag and Drop File Highlight Overlay */}
       {isDraggingFile && (
@@ -1106,7 +1106,7 @@ export default function Deck({
       )}
 
       {/* Track info strip with File Loader at the very top */}
-      <div className="w-full px-4 flex items-center justify-between gap-2 z-10 border-b border-white/5 pb-2 mb-2">
+      <div className="w-full px-4 flex items-center justify-between gap-2 z-10 border-b border-white/5 pb-2 mb-2 shrink-0">
         <div className="flex flex-col min-w-0 flex-1 text-left">
           <span className="text-[7.5px] font-black uppercase tracking-[0.2em] opacity-30">LOADED SOUND SOURCE</span>
           <div className="flex items-center gap-1.5 min-w-0">
@@ -1247,7 +1247,7 @@ export default function Deck({
       )}
 
       {/* Header Deck Info Grid */}
-      <div className="w-full px-4 grid grid-cols-3 gap-2 items-center z-10 font-mono">
+      <div className="w-full px-4 grid grid-cols-3 gap-2 items-center z-10 font-mono shrink-0">
          <div className="flex flex-col">
             <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">STATUS</span>
             <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center truncate">
@@ -1286,7 +1286,7 @@ export default function Deck({
       </div>
 
       {/* Platter Area */}
-      <div className="flex flex-col items-center gap-4 relative w-full px-4">
+      <div className="flex flex-col items-center gap-4 relative w-full px-4 shrink-0">
           <div className="relative group flex flex-col items-center">
               <JogWheel 
                   id={id}
@@ -1375,7 +1375,7 @@ export default function Deck({
             </div>
           </div>
         
-        <div className="grid grid-cols-2 gap-4 w-full">
+        <div className="grid grid-cols-2 gap-4 w-full shrink-0">
             {/* Loops & Cues Left Column */}
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center px-1">
@@ -1740,7 +1740,7 @@ export default function Deck({
       )}
 
       {/* Main Transport Surface */}
-      <div className="w-full flex justify-between items-end px-4 gap-4 z-10">
+      <div className="w-full flex justify-between items-end px-4 gap-4 z-10 shrink-0">
         <div className="flex flex-col gap-3">
             <div className="flex gap-1.5 h-7">
               <button 

@@ -105,3 +105,126 @@
   @apply absolute left-0 w-full h-[1px] bg-white/5 pointer-events-none z-10;
   animation: scanline 8s linear infinite;
 }
+
+/* Responsive Adaptation for Shorter Screen Heights */
+@media (max-height: 768px) {
+  /* Scale down the jogwheel platter size to prevent overflow */
+  .hardware-panel .w-44.h-44 {
+    width: 7.5rem !important; /* ~120px */
+    height: 7.5rem !important; /* ~120px */
+    border-width: 4px !important;
+  }
+  .hardware-panel .w-44.h-44 > div.w-24.h-24 {
+    width: 4rem !important; /* 64px */
+    height: 4rem !important; /* 64px */
+    margin-top: 0px !important;
+  }
+  .hardware-panel .w-44.h-44 svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  /* Shrink text labels to scale layout */
+  .hardware-panel .text-\[10\.5px\] {
+    font-size: 8.5px !important;
+  }
+  .hardware-panel .text-\[8px\] {
+    font-size: 7px !important;
+  }
+  .hardware-panel .text-\[7\.5px\] {
+    font-size: 6.5px !important;
+  }
+  .hardware-panel .text-\[7px\] {
+    font-size: 6px !important;
+  }
+  .hardware-panel .text-[10px] {
+    font-size: 7.5px !important;
+  }
+  .hardware-panel .lcd-display {
+    padding: 2px 4px !important;
+  }
+  
+  /* Shrink buttons */
+  .hardware-panel .w-12.h-12,
+  .hardware-panel .play-button,
+  .hardware-panel .cue-button {
+    width: 2.25rem !important; /* 36px */
+    height: 2.25rem !important; /* 36px */
+  }
+  .hardware-panel .play-button svg, 
+  .hardware-panel .cue-button svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  .hardware-panel .w-8.h-8 {
+    width: 1.75rem !important; /* 28px */
+    height: 1.75rem !important; /* 28px */
+  }
+  .hardware-panel .w-8.h-8 svg {
+    width: 11px !important;
+    height: 11px !important;
+  }
+  .hardware-panel .h-7 {
+    height: 1.5rem !important; /* 24px */
+  }
+  
+  /* Shrink Tempo Fader length */
+  .hardware-panel .h-28 {
+    height: 5rem !important; /* ~80px instead of 112px */
+  }
+  
+  /* Shrink paddings, margins and gaps inside deck */
+  .hardware-panel .py-3 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .hardware-panel .px-4 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .hardware-panel .gap-4 {
+    gap: 0.4rem !important;
+  }
+  .hardware-panel .gap-3 {
+    gap: 0.3rem !important;
+  }
+  .hardware-panel .gap-2 {
+    gap: 0.25rem !important;
+  }
+  .hardware-panel .mb-2 {
+    margin-bottom: 0.15rem !important;
+  }
+  .hardware-panel .pb-2 {
+    padding-bottom: 0.15rem !important;
+  }
+  .hardware-panel .mt-4 {
+    margin-top: 0.25rem !important;
+  }
+  .hardware-panel .mb-1 {
+    margin-bottom: 0.1rem !important;
+  }
+
+  /* Mixer spacing & knob visual adjustments */
+  .hardware-surface .mb-8 {
+    margin-bottom: 0.5rem !important;
+  }
+  .hardware-surface .mb-6 {
+    margin-bottom: 0.3rem !important;
+  }
+  .hardware-surface .mb-4 {
+    margin-bottom: 0.2rem !important;
+  }
+  .hardware-surface .gap-8 {
+    gap: 0.75rem !important;
+  }
+  .hardware-surface .gap-4 {
+    gap: 0.35rem !important;
+  }
+  .hardware-surface .py-4 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+  .hardware-surface .grid-cols-2 {
+    gap: 0.5rem !important;
+  }
+}
