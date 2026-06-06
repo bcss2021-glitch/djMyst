@@ -138,10 +138,28 @@ export default function App() {
 
   // Fullscreen view state & native app environment checks
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobileLandscape, setIsMobileLandscape] = useState(false);
   const [showDiagnosticsWidget, setShowDiagnosticsWidget] = useState<boolean>(() => {
     return localStorage.getItem('showDiagnosticsWidget') !== 'false';
   });
   const [showFullscreenToggle, setShowFullscreenToggle] = useState(true);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      const isSmallScreen = window.innerWidth <= 1024;
+      const isLand = window.innerWidth > window.innerHeight;
+      setIsMobileLandscape((isTouch || isSmallScreen) && isLand);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
 
   useEffect(() => {
     // Detect environment (standalone/native wrapper like Capacitor/Cordova or installed PWA)
@@ -2361,12 +2379,14 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden text-slate-300">
       {/* Landscape Phone Advisory Banner */}
-      <div className="hidden max-md:landscape:flex items-center justify-between px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-500 text-[10px] font-black tracking-wider uppercase gap-2 z-50 select-none font-sans shrink-0">
-        <span className="flex items-center gap-1.5 leading-none">
-          <Info size={11} className="shrink-0 text-amber-500 animate-pulse" />
-          Orientation tip: Portrait is highly recommended for mobile screens (gives full focus per slot deck)!
-        </span>
-      </div>
+      {isMobileLandscape && (
+        <div className="flex items-center justify-between px-4 py-1.5 bg-amber-500/15 border-b border-amber-500/30 text-amber-500 text-[10px] font-black tracking-wider uppercase gap-2 z-50 select-none font-sans shrink-0">
+          <span className="flex items-center gap-1.5 leading-none">
+            <Info size={11} className="shrink-0 text-amber-500 animate-pulse" />
+            Orientation tip: Portrait is highly recommended for mobile screens (gives full focus per slot deck)!
+          </span>
+        </div>
+      )}
 
       {/* TOP BAR: SYSTEM INFO */}
       <header className="h-10 bg-[#121218] border-b border-white/10 flex items-center justify-between px-4 lg:px-6 z-50 flex-shrink-0">
