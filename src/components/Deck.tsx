@@ -209,11 +209,15 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
       ref={wheelRef}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
-      className={`relative w-40 h-40 sm:w-44 sm:h-44 rounded-full bg-[#0a0a0c] border-[5px] sm:border-6 border-[#1c1c20] shadow-[0_0_30px_rgba(0,0,0,0.95),inset_0_0_20px_rgba(0,0,0,0.9)] flex items-center justify-center overflow-hidden transition-all duration-150 select-none ${
+      className={`relative rounded-full bg-[#0a0a0c] border-[5px] sm:border-6 border-[#1c1c20] shadow-[0_0_30px_rgba(0,0,0,0.95),inset_0_0_20px_rgba(0,0,0,0.9)] flex items-center justify-center overflow-hidden transition-all duration-150 select-none jog-wheel-container ${
         isGrabbing 
           ? 'cursor-grabbing border-zinc-700 ring-2 ring-brand-cyan/20 scale-[0.99]' 
           : 'cursor-grab hover:border-zinc-800'
       }`}
+      style={{
+        width: 'var(--platter-size, 11rem)',
+        height: 'var(--platter-size, 11rem)',
+      }}
     >
       {/* 1. VINYL Grooves */}
       {platterStyle === 'VINYL' && (
@@ -273,7 +277,7 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
                 key={i}
                 className="absolute w-1 h-1 bg-white/20 rounded-full"
                 style={{
-                  transform: `rotate(${i * 15}deg) translateY(-76px)`
+                  transform: `rotate(${i * 15}deg) translateY(var(--platter-stroke-y, -74px))`
                 }}
               />
             ))}
@@ -315,7 +319,11 @@ function JogWheel({ isPlaying, isLoading, id, playbackRate, rotation, onClick, o
           e.stopPropagation();
           onClick?.();
         }}
-        className="absolute w-24 h-24 rounded-full bg-gradient-to-b from-[#18181b] to-[#0f0f11] border border-white/[0.08] flex flex-col items-center justify-center shadow-2xl z-10 cursor-pointer active:scale-95 transition-transform"
+        className="absolute rounded-full bg-gradient-to-b from-[#18181b] to-[#0f0f11] border border-white/[0.08] flex flex-col items-center justify-center shadow-2xl z-10 cursor-pointer active:scale-95 transition-transform"
+        style={{
+          width: 'var(--center-size, 6rem)',
+          height: 'var(--center-size, 6rem)',
+        }}
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/75 rounded-full z-20">
@@ -1086,7 +1094,7 @@ export default function Deck({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col items-center justify-between py-2 flex-1 h-full relative hardware-panel overflow-y-auto custom-scrollbar ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
+      className={`flex flex-col items-center justify-between pt-1.5 pb-20 flex-1 h-full relative hardware-panel overflow-y-auto custom-scrollbar ${id === 'A' ? 'deck-gradient-a' : 'deck-gradient-b'}`}
     >
       {/* Drag and Drop File Highlight Overlay */}
       {isDraggingFile && (
@@ -1106,7 +1114,7 @@ export default function Deck({
       )}
 
       {/* Track info strip with File Loader at the very top */}
-      <div className="w-full px-4 flex items-center justify-between gap-2 z-10 border-b border-white/5 pb-1.5 mb-1.5 shrink-0">
+      <div className="w-full px-3 flex items-center justify-between gap-1.5 z-10 border-b border-white/5 pb-1 mb-1 shrink-0">
         <div className="flex flex-col min-w-0 flex-1 text-left">
           <span className="text-[7.5px] font-black uppercase tracking-[0.2em] opacity-30">LOADED SOUND SOURCE</span>
           <div className="flex items-center gap-1.5 min-w-0">
@@ -1247,7 +1255,7 @@ export default function Deck({
       )}
 
       {/* Header Deck Info Grid */}
-      <div className="w-full px-4 grid grid-cols-3 gap-1.5 items-center z-10 font-mono shrink-0 mb-1.5">
+      <div className="w-full px-3 grid grid-cols-3 gap-1.5 items-center z-10 font-mono shrink-0 mb-1">
          <div className="flex flex-col">
             <span className="text-[7px] font-black uppercase tracking-[0.2em] opacity-20">STATUS</span>
             <div className="lcd-display text-[10px] font-bold text-brand-cyan text-center truncate">
@@ -1286,7 +1294,7 @@ export default function Deck({
       </div>
 
       {/* Platter Area with Vertical Flow Controls next to JogWheel */}
-      <div className="flex items-center justify-center gap-2 sm:gap-4 relative w-full px-2 shrink-0 mt-1 mb-1.5 select-none">
+      <div className="flex items-center justify-center gap-2 sm:gap-4 relative w-full px-2 shrink-0 mt-0.5 mb-1 select-none">
           {/* Left Vertical Platter Controls */}
           <div className="flex flex-col gap-1 shrink-0 z-10 items-center">
               <span className="text-[6.5px] font-bold text-zinc-500 uppercase tracking-widest">JOG MODE</span>
@@ -1381,7 +1389,7 @@ export default function Deck({
           </div>
       </div>
         
-      <div className="grid grid-cols-2 gap-3 w-full shrink-0">
+      <div className="grid grid-cols-2 gap-2 w-full shrink-0">
             {/* Loops & Cues Left Column */}
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center px-1">

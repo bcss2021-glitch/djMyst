@@ -106,22 +106,26 @@
   animation: scanline 8s linear infinite;
 }
 
+.jog-wheel-container {
+  --platter-size: 11rem; /* 176px */
+  --platter-stroke-y: -74px;
+  --center-size: 6rem; /* 96px */
+}
+
 /* Responsive Adaptation for Shorter Screen Heights */
-@media (max-height: 768px) {
-  /* Scale down the jogwheel platter size to prevent overflow */
-  .hardware-panel .w-44.h-44 {
-    width: 7.5rem !important; /* ~120px */
-    height: 7.5rem !important; /* ~120px */
-    border-width: 4px !important;
+@media (max-height: 880px) {
+  .jog-wheel-container {
+    --platter-size: 8.5rem !important; /* ~136px */
+    --platter-stroke-y: -56px !important;
+    --center-size: 4.5rem !important; /* ~72px */
   }
-  .hardware-panel .w-44.h-44 > div.w-24.h-24 {
-    width: 4rem !important; /* 64px */
-    height: 4rem !important; /* 64px */
-    margin-top: 0px !important;
-  }
-  .hardware-panel .w-44.h-44 svg {
-    width: 14px !important;
-    height: 14px !important;
+
+  @media (max-height: 768px) {
+    .jog-wheel-container {
+      --platter-size: 7.5rem !important; /* ~120px */
+      --platter-stroke-y: -48px !important;
+      --center-size: 4rem !important; /* 64px */
+    }
   }
 
   /* Shrink text labels to scale layout */
