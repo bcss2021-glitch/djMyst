@@ -44,6 +44,7 @@ export class AudioEngine {
   
   private recorder: Tone.Recorder = new Tone.Recorder();
   private lastLoadedUrls = { A: '', B: '' };
+  private loadTokens = { A: 0, B: 0 };
 
   // Procedural synthesizer engines
   private synth: Tone.PolySynth | null = null;
@@ -398,6 +399,8 @@ export class AudioEngine {
   }
 
   async loadTrack(deck: 'A' | 'B', urlOrFile: string | File | Blob) {
+    const token = ++this.loadTokens[deck];
+    
     let url = '';
     let isDirectFile = false;
 
@@ -458,7 +461,19 @@ export class AudioEngine {
         const rawCtx = Tone.context?.rawContext || (Tone.context as any)?._context || new (window.AudioContext || (window as any).webkitAudioContext)();
         
         const arrayBuffer = await fileOrBlob.arrayBuffer();
+        if (token !== this.loadTokens[deck]) {
+          player.disconnect();
+          player.dispose();
+          return;
+        }
+        
         const audioBuffer = await rawCtx.decodeAudioData(arrayBuffer);
+        if (token !== this.loadTokens[deck]) {
+          player.disconnect();
+          player.dispose();
+          return;
+        }
+        
         player.buffer = new Tone.ToneAudioBuffer(audioBuffer);
         player.loop = true;
         this.applyRate(deck);
@@ -484,6 +499,12 @@ export class AudioEngine {
         }
         
         const buffer = this.createSyntheticBuffer(tempo, 60, style);
+        if (token !== this.loadTokens[deck]) {
+          player.disconnect();
+          player.dispose();
+          return;
+        }
+        
         player.buffer = new Tone.ToneAudioBuffer(buffer);
         player.loop = true;
         this.applyRate(deck);
@@ -500,15 +521,30 @@ export class AudioEngine {
         } catch (ce) {}
       }
       await player.load(url);
+      if (token !== this.loadTokens[deck]) {
+        player.disconnect();
+        player.dispose();
+        return;
+      }
       player.loop = true;
       this.applyRate(deck); // Ensure rate is correct for new track
     } catch (error) {
       console.error(`AudioEngine Error loading track on ${deck}:`, error);
+      if (token !== this.loadTokens[deck]) {
+        player.disconnect();
+        player.dispose();
+        return;
+      }
       // Fallback: If loading fails due to CORS or networking, generate a seamless synthetic loop
       try {
         console.warn("Loading failed. Falling back to synthetic track so player works seamlessly.");
         const seedStyle = url.toLowerCase().includes('house') ? 'house' : (url.toLowerCase().includes('bass') ? 'bass' : 'techno');
         const buffer = this.createSyntheticBuffer(125, 60, seedStyle);
+        if (token !== this.loadTokens[deck]) {
+          player.disconnect();
+          player.dispose();
+          return;
+        }
         player.buffer = new Tone.ToneAudioBuffer(buffer);
         player.loop = true;
         this.applyRate(deck);

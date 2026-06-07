@@ -146,13 +146,20 @@ export default function App() {
 
   useEffect(() => {
     const checkOrientation = () => {
+      const ua = navigator.userAgent;
       const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
       const isLand = window.innerWidth > window.innerHeight;
-      // Mobile phones in landscape mode typically have very restricted viewport height (usually <= 480px) and width (<= 960px)
-      // Tablets (like iPads) have a landscape height of 768px or more, and PCs are obviously larger
-      const isPhoneLandscapeHeight = window.innerHeight > 0 && window.innerHeight <= 520;
+      
+      // Specifically target mobile phones (exclude iPad, Tablets, and PCs)
+      // Android tablets do not contain "Mobile", only "Android". Android phones contain "Mobile" and "Android".
+      // iPhones contain "iPhone" and "Mobile". iPads do not contain "iPhone" or "Mobile" (often showing "Macintosh" with touch).
+      const isPhoneUA = /iPhone|Mobile|iPod|Android.*Mobile/i.test(ua);
+      
+      // Phone landscape viewport boundaries: height is very narrow (usually <= 500px) and width is relatively narrow
+      const isPhoneLandscapeHeight = window.innerHeight > 0 && window.innerHeight <= 500;
       const isPhoneLandscapeWidth = window.innerWidth > 0 && window.innerWidth <= 960;
-      setIsMobileLandscape(isTouch && isLand && isPhoneLandscapeHeight && isPhoneLandscapeWidth);
+      
+      setIsMobileLandscape(isTouch && isPhoneUA && isLand && isPhoneLandscapeHeight && isPhoneLandscapeWidth);
     };
 
     checkOrientation();
