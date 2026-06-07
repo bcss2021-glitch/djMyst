@@ -84,7 +84,8 @@ async function startServer() {
       // Fetch audio file from the remote source
       const response = await fetch(audioUrl, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Accept": "*/*"
         }
       });
       if (!response.ok) {
@@ -102,12 +103,15 @@ async function startServer() {
       }
       res.setHeader("Access-Control-Allow-Origin", "*");
 
-      // Stream the response body
+      // Stream the response body safely using Readable.fromWeb to bypass async iteration bugs across Node versions
       if (response.body) {
-        for await (const chunk of response.body as any) {
-          res.write(chunk);
+        const { Readable } = await import("stream");
+        if (typeof Readable.fromWeb === "function") {
+          Readable.fromWeb(response.body as any).pipe(res);
+        } else {
+          const arrayBuffer = await response.arrayBuffer();
+          res.send(Buffer.from(arrayBuffer));
         }
-        res.end();
       } else {
         const arrayBuffer = await response.arrayBuffer();
         res.send(Buffer.from(arrayBuffer));
