@@ -72,6 +72,52 @@ async function startServer() {
     }
   });
 
+  // API route to proxy audio files to bypass CORS restrictions
+  app.get("/api/proxy-audio", async (req, res) => {
+    const audioUrl = req.query.url as string;
+    if (!audioUrl) {
+      res.status(400).send("Parameter 'url' is required");
+      return;
+    }
+
+    try {
+      // Fetch audio file from the remote source
+      const response = await fetch(audioUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        }
+      });
+      if (!response.ok) {
+        res.status(response.status).send(`Failed to fetch remote audio: ${response.statusText}`);
+        return;
+      }
+
+      // Relay the response headers
+      const contentType = response.headers.get("content-type") || "audio/mpeg";
+      const contentLength = response.headers.get("content-length");
+
+      res.setHeader("Content-Type", contentType);
+      if (contentLength) {
+        res.setHeader("Content-Length", contentLength);
+      }
+      res.setHeader("Access-Control-Allow-Origin", "*");
+
+      // Stream the response body
+      if (response.body) {
+        for await (const chunk of response.body as any) {
+          res.write(chunk);
+        }
+        res.end();
+      } else {
+        const arrayBuffer = await response.arrayBuffer();
+        res.send(Buffer.from(arrayBuffer));
+      }
+    } catch (error: any) {
+      console.error("[Proxy Audio Error] Failed to fetch audio:", error);
+      res.status(500).send(`Server error fetching audio: ${error.message}`);
+    }
+  });
+
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", mode: process.env.NODE_ENV || "development" });

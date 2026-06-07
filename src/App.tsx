@@ -445,6 +445,13 @@ export default function App() {
         setIsSearching(false);
       }
       
+      // Bypass CORS for remote external url files
+      if (typeof resolvedStreamUrl === 'string' && resolvedStreamUrl.startsWith('http')) {
+        if (!resolvedStreamUrl.includes('/api/proxy-audio') && !resolvedStreamUrl.includes(window.location.host)) {
+          resolvedStreamUrl = `/api/proxy-audio?url=${encodeURIComponent(resolvedStreamUrl)}`;
+        }
+      }
+      
       // If a newer load request has been made on this deck, ignore this old load request
       if (activeLoadingUrlRef.current[deck] !== trackingKey) {
         return;
@@ -507,6 +514,9 @@ export default function App() {
         return newHistory;
       });
     } catch (e) {
+      if (activeLoadingUrlRef.current[deck] !== trackingKey) {
+        return;
+      }
       console.error("Failed to load track:", e);
       setIsSearching(false);
       setLoadingState(prev => ({ ...prev, [deck]: false }));

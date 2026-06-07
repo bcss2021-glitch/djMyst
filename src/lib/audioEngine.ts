@@ -431,26 +431,8 @@ export class AudioEngine {
     }
     this.lastLoadedUrls[deck] = typeof urlOrFile === 'string' ? urlOrFile : '';
 
-    // Completely dispose of the old Tone.Player to cancel any pending downloads or locks
-    const oldPlayer = this.getDeck(deck);
-    try {
-      if (oldPlayer) {
-        oldPlayer.stop();
-        oldPlayer.disconnect();
-        oldPlayer.dispose();
-      }
-    } catch (e) {
-      console.warn("Error disposing old player node:", e);
-    }
-
-    const player = new Tone.Player();
-    player.connect(deck === 'A' ? this.gainA : this.gainB);
-    
-    if (deck === 'A') {
-      this.deckA = player;
-    } else {
-      this.deckB = player;
-    }
+    const player = this.getDeck(deck);
+    player.stop();
     
     this.playOffset[deck] = 0;
     this.playStartTime[deck] = 0;
@@ -462,15 +444,11 @@ export class AudioEngine {
         
         const arrayBuffer = await fileOrBlob.arrayBuffer();
         if (token !== this.loadTokens[deck]) {
-          player.disconnect();
-          player.dispose();
           return;
         }
         
         const audioBuffer = await rawCtx.decodeAudioData(arrayBuffer);
         if (token !== this.loadTokens[deck]) {
-          player.disconnect();
-          player.dispose();
           return;
         }
         
@@ -485,54 +463,24 @@ export class AudioEngine {
       }
     }
 
-    // Intercept default system tracks to load locally processed synthetic loops
-    if (url.includes('pixabay.com/audio') && (url.includes('653925c48b') || url.includes('249df9c4d4') || url.includes('6a20803c62'))) {
-      try {
-        let style: 'techno' | 'house' | 'bass' = 'techno';
-        let tempo = 126;
-        if (url.includes('249df9c4d4')) {
-          style = 'house';
-          tempo = 122;
-        } else if (url.includes('6a20803c62')) {
-          style = 'bass';
-          tempo = 128;
-        }
-        
-        const buffer = this.createSyntheticBuffer(tempo, 60, style);
-        if (token !== this.loadTokens[deck]) {
-          player.disconnect();
-          player.dispose();
-          return;
-        }
-        
-        player.buffer = new Tone.ToneAudioBuffer(buffer);
-        player.loop = true;
-        this.applyRate(deck);
-        return;
-      } catch (sysErr) {
-        console.error("Failed to generate synthetic loop:", sysErr);
-      }
-    }
-
     try {
       if (typeof (Tone as any).ToneAudioBuffer?.removeFromCache === 'function') {
         try {
           (Tone as any).ToneAudioBuffer.removeFromCache(url);
         } catch (ce) {}
       }
-      await player.load(url);
+      
+      const buffer = await Tone.ToneAudioBuffer.fromUrl(url);
       if (token !== this.loadTokens[deck]) {
-        player.disconnect();
-        player.dispose();
+        buffer.dispose();
         return;
       }
+      player.buffer = buffer;
       player.loop = true;
       this.applyRate(deck); // Ensure rate is correct for new track
     } catch (error) {
       console.error(`AudioEngine Error loading track on ${deck}:`, error);
       if (token !== this.loadTokens[deck]) {
-        player.disconnect();
-        player.dispose();
         return;
       }
       // Fallback: If loading fails due to CORS or networking, generate a seamless synthetic loop
@@ -541,8 +489,6 @@ export class AudioEngine {
         const seedStyle = url.toLowerCase().includes('house') ? 'house' : (url.toLowerCase().includes('bass') ? 'bass' : 'techno');
         const buffer = this.createSyntheticBuffer(125, 60, seedStyle);
         if (token !== this.loadTokens[deck]) {
-          player.disconnect();
-          player.dispose();
           return;
         }
         player.buffer = new Tone.ToneAudioBuffer(buffer);
